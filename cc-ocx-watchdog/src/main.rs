@@ -217,9 +217,9 @@ mod runtime {
                 }
             }
             let started = Instant::now();
-            // The health answer needs the listener's pid, not a process handle. When the proxy
-            // outranks this restricted account (`open_process`), measure it anyway; only
-            // termination is unavailable without a handle.
+            // The health answer needs the listener's pid, not a process handle. When the process
+            // cannot be opened (`open_process`; the error does not say why), measure the answer
+            // anyway; only termination is unavailable without a handle.
             let unopenable = discovery_error
                 .as_deref()
                 .and_then(|error| listener_when_unopenable(config, error));

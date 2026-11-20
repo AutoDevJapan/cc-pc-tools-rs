@@ -12,7 +12,7 @@ Rustで、同じWindowsプロセスの `/healthz` が20秒以内に応答しな�
 
 プロセス構造の参照: [Microsoft PEB](https://learn.microsoft.com/en-us/windows/win32/api/winternl/ns-winternl-peb)、[CrashpadのWindowsプロセス構造](https://chromium.googlesource.com/crashpad/crashpad/+/refs/heads/main/util/win/process_structs.h)。
 
-`inspect` は所有確認と健康検査を読み取りだけで実行し、PID・起動時刻・健康状態・検査時間だけを出力します。監視の状態や復旧記録を書かず、稼働中の監視と並行して配置前の確認に使えます。
+`inspect` は所有確認と健康検査を読み取りだけで実行し、PID・起動時刻・健康状態・観測の種類（`observation_kind`）・検査時間だけを出力します。監視の状態や復旧記録を書かず、稼働中の監視と並行して配置前の確認に使えます。
 
 ```powershell
 cargo test --locked --manifest-path cc-ocx-watchdog/Cargo.toml
@@ -24,9 +24,9 @@ cargo build --release --locked --manifest-path cc-ocx-watchdog/Cargo.toml --bin 
 
 `check` は1回だけ検査し、検査結果を保存します。監視が既に動いている場合は多重起動を拒否するので、状態確認には `status.json` を読みます。`watch --config <絶対パス>` では隔離検査用の設定を読み込みます。設定は `Config` の全フィールドを持つJSONです。配布する既定値は20秒・10秒間隔・起動猶予120秒・終了間隔120秒です。
 
-## 権限が足りずプロセスを開けない場合
+## プロセスを開けない場合（`open_process`）
 
-`OpenProcess` が拒否される（`open_process`）と、監視はプロセスの実行ファイル・起動時刻・所有記録を確認できません。たとえばプロキシが監視アカウントより高い権限で動いている場合です。この場合に限り、OSのTCP表が示す待受PIDに対して `/healthz` を検査し、結果を `healthy` に実測値で記録します。応答の `service` と `pid` は、その待受PIDと照合します。この照合は古い応答や別プロセスの応答を見分けるためのものです。待受PIDは応答の照合にだけ使い、終了の対象にしません。`open_process` 以外の確認失敗は、従来どおり不健康として扱います。
+`OpenProcess` が失敗する（`open_process`）と、監視はプロセスの実行ファイル・起動時刻・所有記録を確認できません。エラーコードは記録しないので、原因は分かりません。たとえばプロキシが監視アカウントより高い権限で動いている場合にも起こります。この場合に限り、OSのTCP表が示す待受PIDに対して `/healthz` を検査し、結果を `healthy` に実測値で記録します。応答の `service` と `pid` は、その待受PIDと照合します。この照合は、再起動の競合などで待受PIDと食い違った応答を除くためのものです。応答は偽装されうるので、所有の証明にはなりません。待受PIDは応答の照合にだけ使い、終了の対象にしません。`open_process` 以外の確認失敗は、従来どおり不健康として扱います。
 
 次の3つの事実は別々に記録します。応答が正常でも、所有を確認できたことや終了してよいことは意味しません。
 

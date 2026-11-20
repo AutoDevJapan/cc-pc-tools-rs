@@ -30,12 +30,12 @@ import (
 
 const repositoryID = "1406818713"
 const jobKey = "guard-bootstrap"
-const guardSource = "ccf6abba01e2b57dbe0086cf10bcfbb3b4409eb4"
-const guardTree = "cc93cf08b34800d672f5d61510743932c94f1856"
+const guardSource = "c1adc362778aae5270ceacea1214b9d17940589e"
+const guardTree = "2137e3ff923aa680041d82f642d881305efd0e98"
 // Verify-only pins of the same reviewed guard source: the trees of its two
 // module directories and the number of selected inputs. They are checked and
 // never written into capture.json, source-proof.json or the publication record.
-const guardRepairTree = "dc187ab893fec5d92f2f5caeabb2cf0d235b916c"
+const guardRepairTree = "4a9e710eadbdb78e3842bb88361d9b5ce68b238e"
 const guardContractTree = "7278e7e373d0c65ee7446ad54223e85b3fab565f"
 const guardInputCount = 253
 const sourceLimit = 8 << 20

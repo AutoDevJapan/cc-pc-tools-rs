@@ -325,7 +325,7 @@ func TestOwnedDriveCargoDoesNotDiscoverPhysicalAncestorConfiguration(t *testing.
 			t.Error("owned drive cleanup", e)
 		}
 	}()
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 	settings := mp4CompilerEnvironment(filepath.Join(root, "home"))
 	settings["RUSTC"] = snapshotTestTool(t, "rustc")

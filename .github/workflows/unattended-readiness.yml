@@ -251,7 +251,9 @@ jobs:
           exit $LASTEXITCODE
       # The artifact of the third formal capture is retained until 2026-11-27T03:34:21Z.
       # Within ten minutes of that time this step fails instead of skipping. It is removed
-      # in the change that retires generation 3, as the step of generation 2 was.
+      # in the change that retires generation 3. The step of generation 2 was removed in
+      # dfc3e950 (2026-11-17T04:41:53Z), when its run was recorded and about 22.6 hours
+      # before its artifact expired, not after that deadline.
       - name: Verify the third formal Task runner artifact while retained
         if: runner.environment == 'github-hosted'
         working-directory: tools/guard-refresh-software-reader
@@ -420,7 +422,7 @@ jobs:
           GIT_CONFIG_KEY_1: core.eol
           GIT_CONFIG_VALUE_1: lf
         with:
-          ref: 80c4ed5cbd864585f4894c6286d3d5c92194c1f5
+          ref: ccf6abba01e2b57dbe0086cf10bcfbb3b4409eb4
           path: guard-source
           fetch-depth: 0
           persist-credentials: false
@@ -520,8 +522,8 @@ jobs:
           $result = [ordered]@{
             domain = 'guard-gha-publication-v1'
             repository_id = [long]$env:GITHUB_REPOSITORY_ID
-            source = '80c4ed5cbd864585f4894c6286d3d5c92194c1f5'
-            source_tree = '84437789dfbe1bf1d56e4b96698b5c8da4a3dfb7'
+            source = 'ccf6abba01e2b57dbe0086cf10bcfbb3b4409eb4'
+            source_tree = 'cc93cf08b34800d672f5d61510743932c94f1856'
             producer_revision = $env:GITHUB_SHA
             run_id = [long]$env:GITHUB_RUN_ID
             run_attempt = [int]$env:GITHUB_RUN_ATTEMPT

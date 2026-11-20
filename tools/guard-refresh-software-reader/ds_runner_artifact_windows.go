@@ -51,7 +51,8 @@ var errDSRunnerCleanup = errors.New("ds_runner_cleanup_failed")
 // the owner credential, or whose owner check fails, stops earlier. Generation 2 stopped at the
 // producer comparison instead (ds_runner_producer_compare_mismatch, before any request about
 // the run or its artifacts): its producer revision is an ancestor of the approved producer,
-// and any capture whose producer revision is not ahead of the approved producer stops there.
+// and any capture whose producer revision is neither ahead of nor identical to the approved
+// producer stops there.
 // These are expected capture bytes, not an issuer or an installed grant.
 // The authenticated/cryptographic constructor still verifies all material.
 // No CLI/JSON/env can replace this tuple or select another receipt.

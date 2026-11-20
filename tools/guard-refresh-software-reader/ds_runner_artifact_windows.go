@@ -27,9 +27,10 @@ const dsRunnerModuleTree = "d0d012463d11faec2b57efffc80e8c13366dd3fd"
 // seven-day retention text, which lands after this base, so the producer revision
 // of a capture is a main commit that contains that change. The compare answer is
 // read whole. Its size depends on how much content changed between the base and
-// the producer revision, not on the number of commits (one measurement was 38
-// commits and about 1.08 MB), and the limit is 2 MiB, so move the base forward in
-// a reviewed change before the answer nears the limit.
+// the producer revision, not on the number of commits (measurements: 38 commits and
+// about 1.08 MB, then 18 commits and 423,765 bytes for the producer revision of
+// generation 3), and the limit is 2 MiB, so move the base forward in a reviewed
+// change before the answer nears the limit.
 const dsRunnerApprovedProducer = "95c1004e0017cb9d8d3b16f93daa72706eaccca1"
 const dsRunnerWorkflow = ".github/workflows/task-runner-capture.yml"
 const dsRunnerModule = "github.com/AutoDevJapan/cc-pc-tools-rs/unattended-runner"
@@ -38,22 +39,23 @@ var errDSRunnerCleanup = errors.New("ds_runner_cleanup_failed")
 
 // Capture generations. A generation is one formal capture of the fixed runner source.
 // Its hosted artifact has a fixed retention, so a generation is admitted for a limited time.
-// Generation 1 expired at 2026-11-17T00:12:39Z. It is retired: its tuple stays below as a
-// record only, and every consumer rejects it. Generation 2 is the capture admitted now;
-// the next capture becomes generation 3. Generation 2 expired at 2026-11-18T03:16:58Z:
-// until the reviewed pins of generation 3 replace it, every maintenance command fails
-// closed. Its producer revision is an ancestor of the approved producer, so a run that
-// gets as far as the producer comparison stops there with
-// ds_runner_producer_compare_mismatch, before any request about the run or its
-// artifacts; a run without the owner credential, or whose owner check fails, stops
-// earlier. The artifact reasons belong to a capture whose producer descends from the
-// approved producer: GitHub drops an expired artifact from the run's list, so the
-// reason is ds_runner_artifacts_absent, and a list that still shows it as expired
-// gives ds_runner_artifacts_expired.
+// Generation 1 expired at 2026-11-17T00:12:39Z and generation 2 at 2026-11-18T03:16:58Z.
+// Both are retired: their tuples stay below as a record only, and every consumer rejects
+// them. Generation 3 is the capture admitted now; the next capture becomes generation 4.
+// The artifact of generation 3 is retained until 2026-11-27T03:34:21Z. After that every
+// maintenance command fails closed until the reviewed pins of generation 4 replace it.
+// Its producer revision descends from the approved producer, so a run passes the producer
+// comparison and, while the other checks agree, reaches the run's artifact list: GitHub
+// drops an expired artifact from that list, so the reason is then ds_runner_artifacts_absent,
+// and a list that still shows it as expired gives ds_runner_artifacts_expired. A run without
+// the owner credential, or whose owner check fails, stops earlier. Generation 2 stopped at the
+// producer comparison instead (ds_runner_producer_compare_mismatch, before any request about
+// the run or its artifacts): its producer revision is an ancestor of the approved producer,
+// and any capture whose producer revision is not ahead of the approved producer stops there.
 // These are expected capture bytes, not an issuer or an installed grant.
 // The authenticated/cryptographic constructor still verifies all material.
 // No CLI/JSON/env can replace this tuple or select another receipt.
-const dsRunnerCaptureGeneration = 2
+const dsRunnerCaptureGeneration = 3
 type dsRunnerCapturePin struct {
     Producer string
     WorkflowID, RunID, JobID, CheckRunID, ArtifactID int64
@@ -75,20 +77,29 @@ var dsRunnerRetiredCaptures = []dsRunnerRetiredCapture{
         ProofSHA:"550176dcbf25f5b407e1bf0b05068350fc25feba2ac1acdc734ae91fc0c5f17a",
         BundleSHA:"5192d66e050efdbf33078587b91fd69a3f07868ef8d63fc5cd8d77ff7d63e5f3",AttestationID:"67916323",
     }},
+    {Generation:2,ExpiredAt:"2026-11-18T03:16:58Z",Pin:dsRunnerCapturePin{
+        Producer:"800f4c82d68394c1d844a35ad3c1c49133c7bbe8",
+        WorkflowID:419451709,RunID:44008886976,JobID:133790798206,CheckRunID:133790798206,ArtifactID:14296275534,Attempt:1,
+        ArchiveSHA:"9a075932fd9197157bc0bede94704a93b0ac902dfbf596e7d81b4d14c2a477df",
+        OutputSHA:"3b64239e3c154187a1f81e2afbff70ce6ca041d7b54532d3f09a81f3983fad95",
+        CaptureSHA:"ad88a46f131a01f50671fa11100b784f63425f1b2ccbb02020ae4f9187a8647c",
+        ProofSHA:"8b45c02298028a114876d34c2ef6d1f33f578dbead3f2cfa272d3ad1c7cb8a4c",
+        BundleSHA:"38470f1a09aa3f33466554e6ae42c8a18eddbb79b3b01739187c472de50bfe64",AttestationID:"68439001",
+    }},
 }
 var dsRunnerAdmittedCapture = dsRunnerCapturePin{
-    Producer:"800f4c82d68394c1d844a35ad3c1c49133c7bbe8",
-    WorkflowID:419451709,RunID:44008886976,JobID:133790798206,CheckRunID:133790798206,ArtifactID:14296275534,Attempt:1,
-    ArchiveSHA:"9a075932fd9197157bc0bede94704a93b0ac902dfbf596e7d81b4d14c2a477df",
+    Producer:"2afd2669e43d356d997e027ffdeb8a7d63d2b6b2",
+    WorkflowID:419451709,RunID:44668468992,JobID:136063453021,CheckRunID:136063453021,ArtifactID:14598363233,Attempt:1,
+    ArchiveSHA:"27b901cdf27d8a59f276524471f1a099a1ea345eb1e6f7a153f1676efc1dfa62",
     OutputSHA:"3b64239e3c154187a1f81e2afbff70ce6ca041d7b54532d3f09a81f3983fad95",
-    CaptureSHA:"ad88a46f131a01f50671fa11100b784f63425f1b2ccbb02020ae4f9187a8647c",
-    ProofSHA:"8b45c02298028a114876d34c2ef6d1f33f578dbead3f2cfa272d3ad1c7cb8a4c",
-    BundleSHA:"38470f1a09aa3f33466554e6ae42c8a18eddbb79b3b01739187c472de50bfe64",AttestationID:"68439001",
+    CaptureSHA:"9e6c7edb820ccc0e67199e6a18ca143167a91b3b25cdd6679b70e9b751d6e6ed",
+    ProofSHA:"572d33dbe62bc1d4e956d357d671366a614e69380743e14ca96d7c21f17bc0d0",
+    BundleSHA:"28b23c7086e6cbd3b3a37b424ba0fe7c25efdf69fbb35607dc080100ce53e66f",AttestationID:"69973705",
 }
 // A pin is retired when it reuses any run-specific identity of a retired capture, even if its
-// other fields were changed. The output digest is not compared: generation 2 built the same
-// executable as generation 1 from the same fixed source, so a new capture may legitimately
-// carry a retired output digest.
+// other fields were changed. The output digest is not compared: every generation so far built
+// the same executable from the same fixed source, so a new capture may legitimately carry a
+// retired output digest.
 func dsRunnerPinRetired(p dsRunnerCapturePin) bool {
     for _,r:=range dsRunnerRetiredCaptures{
         q:=r.Pin

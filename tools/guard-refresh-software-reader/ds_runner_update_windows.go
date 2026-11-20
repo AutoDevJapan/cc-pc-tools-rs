@@ -64,6 +64,7 @@ type dsRunnerMaintenanceResult struct{
     CommitAttempted bool `json:"commit_attempted"`
     CommitOutcome string `json:"commit_outcome"`
     Reason string `json:"reason"`
+    FailureReason string `json:"failure_reason,omitempty"`
     Current *softwareIdentity `json:"current_identity,omitempty"`
     Stage *softwareIdentity `json:"stage_identity,omitempty"`
     Backup *softwareIdentity `json:"backup_identity,omitempty"`
@@ -93,28 +94,28 @@ func executeDSRunnerMaintenanceFor(ctx context.Context,op string,permit *dsRunne
     if ctx==nil||ctx.Err()!=nil||!dsRunnerMaintenanceOperation(op)||permit==nil||permit.self!=permit||permit.ctx!=ctx||access.acquire==nil||op!="capture"&&access.open==nil{return}
     candidate,err:=access.acquire(ctx)
     if candidate!=nil{defer func(){closeErr:=candidate.Close();cleanup,cancel:=context.WithTimeout(context.Background(),5*time.Second);defer cancel();waitErr:=candidate.waitClosed(cleanup);if closeErr!=nil||waitErr!=nil{r.Qualified=false;r.Prepared=false;r.InstalledVerified=false;r.CleanupFailed=true;if r.Reason=="authenticated_capture_verified_no_target_access"||r.Reason=="verified_no_write"||r.Reason=="prepared_verified_fixed_leaves"||r.Reason=="installed_rechecked"||r.Reason=="already_installed_verified"{r.Reason="cleanup_unknown"}}}()}
-    if err!=nil||candidate==nil{r.CleanupFailed=dsRunnerCleanupFact(err);return}
+    if err!=nil||candidate==nil{r.CleanupFailed=dsRunnerCleanupFact(err);r.FailureReason=dsRunnerFailureReasonFor(ctx,err);return}
     err=candidate.with(ctx,func(payload []byte)(innerErr error){
         purpose:=dsRunnerRepairPurpose{candidate:candidate,pin:candidate.pin,permit:permit};if !dsRunnerPurposeValid(purpose){return errDSRunnerEvidence}
         if op=="capture"{r.Qualified=true;r.CandidateSHA=purpose.pin.OutputSHA;r.Reason="authenticated_capture_verified_no_target_access";return nil}
-        target,err:=access.open(ctx,purpose);if target!=nil{defer func(){if closeErr:=target.Close();closeErr!=nil{innerErr=errors.Join(innerErr,errDSRunnerCleanup,closeErr)}}()};if err!=nil||target==nil{if dsRunnerCleanupFact(err){return errors.Join(errDSRunnerEvidence,errDSRunnerCleanup)};return errDSRunnerEvidence}
-        current,snapshot,err:=target.Read(ctx,dsRunnerCurrent);defer clear(current);if err!=nil{return err}
-        if !dsRunnerValidSnapshot(snapshot){return errDSRunnerEvidence};r.Current=&snapshot.id;r.ACLSHA=digest([]byte(snapshot.acl));r.CandidateSHA=purpose.pin.OutputSHA
+        target,err:=access.open(ctx,purpose);if target!=nil{defer func(){if closeErr:=target.Close();closeErr!=nil{innerErr=errors.Join(innerErr,errDSRunnerCleanup,closeErr)}}()};if err!=nil||target==nil{if dsRunnerCleanupFact(err){return errors.Join(errDSRunnerEvidence,errDSRunnerCleanup,dsRunnerFailure("ds_runner_target_open_failed"))};return errors.Join(errDSRunnerEvidence,dsRunnerFailure("ds_runner_target_open_failed"))}
+        current,snapshot,err:=target.Read(ctx,dsRunnerCurrent);defer clear(current);if err!=nil{return dsRunnerTargetFailure(err,"ds_runner_target_read_failed")}
+        if !dsRunnerValidSnapshot(snapshot){return errors.Join(errDSRunnerEvidence,dsRunnerFailure("ds_runner_target_snapshot_invalid"))};r.Current=&snapshot.id;r.ACLSHA=digest([]byte(snapshot.acl));r.CandidateSHA=purpose.pin.OutputSHA
         if digest(current)==purpose.pin.OutputSHA&&len(current)==len(payload){r.Qualified=true;r.InstalledVerified=true;r.Reason="already_installed_verified";return nil}
-        if int64(len(current))!=oldBytes||digest(current)!=oldSHA{return errDSRunnerEvidence}
-        if target.Recheck(ctx,dsRunnerCurrent,snapshot)!=nil{return errDSRunnerEvidence}
+        if int64(len(current))!=oldBytes||digest(current)!=oldSHA{return errors.Join(errDSRunnerEvidence,dsRunnerFailure("ds_runner_target_predecessor_mismatch"))}
+        if target.Recheck(ctx,dsRunnerCurrent,snapshot)!=nil{return errors.Join(errDSRunnerEvidence,dsRunnerFailure("ds_runner_target_changed"))}
         r.Qualified=true;r.Reason="verified_no_write";if op=="verify"{return nil}
-        backup,created,err:=target.Ensure(ctx,dsRunnerSaved,current);if created{r.Created=append(r.Created,dsRunnerBackup);if backup.id.FileID!=""{r.Backup=&backup.id}};if err!=nil{return err};r.Backup=&backup.id
-        stage,created,err:=target.Ensure(ctx,dsRunnerStaged,payload);if created{r.Created=append(r.Created,dsRunnerStage);if stage.id.FileID!=""{r.Stage=&stage.id}};if err!=nil{return err};r.Stage=&stage.id
-        if !dsRunnerValidSnapshot(backup)||!dsRunnerValidSnapshot(stage)||backup.acl!=snapshot.acl||stage.acl!=snapshot.acl||backup.parent!=snapshot.parent||stage.parent!=snapshot.parent{return errDSRunnerEvidence}
-        if target.Recheck(ctx,dsRunnerCurrent,snapshot)!=nil||target.Recheck(ctx,dsRunnerSaved,backup)!=nil||target.Recheck(ctx,dsRunnerStaged,stage)!=nil||ctx.Err()!=nil{return errDSRunnerEvidence}
+        backup,created,err:=target.Ensure(ctx,dsRunnerSaved,current);if created{r.Created=append(r.Created,dsRunnerBackup);if backup.id.FileID!=""{r.Backup=&backup.id}};if err!=nil{return dsRunnerTargetFailure(err,"ds_runner_target_backup_failed")};r.Backup=&backup.id
+        stage,created,err:=target.Ensure(ctx,dsRunnerStaged,payload);if created{r.Created=append(r.Created,dsRunnerStage);if stage.id.FileID!=""{r.Stage=&stage.id}};if err!=nil{return dsRunnerTargetFailure(err,"ds_runner_target_stage_failed")};r.Stage=&stage.id
+        if !dsRunnerValidSnapshot(backup)||!dsRunnerValidSnapshot(stage)||backup.acl!=snapshot.acl||stage.acl!=snapshot.acl||backup.parent!=snapshot.parent||stage.parent!=snapshot.parent{return errors.Join(errDSRunnerEvidence,dsRunnerFailure("ds_runner_target_leaf_mismatch"))}
+        if target.Recheck(ctx,dsRunnerCurrent,snapshot)!=nil||target.Recheck(ctx,dsRunnerSaved,backup)!=nil||target.Recheck(ctx,dsRunnerStaged,stage)!=nil||ctx.Err()!=nil{return errors.Join(errDSRunnerEvidence,dsRunnerFailure("ds_runner_target_changed"))}
         r.Prepared=true;r.Reason="prepared_verified_fixed_leaves";if op=="prepare"{return nil}
         r.CommitAttempted=true;r.CommitOutcome=dsRunnerCommitUnconfirmed;committed,err:=target.Publish(ctx,snapshot,stage,backup);r.CommitOutcome=dsRunnerCommitOutcomeFor(committed,err);r.CommitAttempted=r.CommitOutcome!=dsRunnerCommitNotAttempted;r.UpdatePerformed=committed;if err!=nil{return err}
-        actual,id,err:=target.Read(ctx,dsRunnerCurrent);defer clear(actual);if err!=nil{return err}
-        if !committed||!dsRunnerValidSnapshot(id)||id.id.Volume!=stage.id.Volume||id.id.FileID!=stage.id.FileID||id.id.Created!=snapshot.id.Created||id.parent!=snapshot.parent||id.acl!=snapshot.acl||digest(actual)!=purpose.pin.OutputSHA||len(actual)!=len(payload)||ctx.Err()!=nil{return errDSRunnerEvidence}
+        actual,id,err:=target.Read(ctx,dsRunnerCurrent);defer clear(actual);if err!=nil{return dsRunnerTargetFailure(err,"ds_runner_target_postcheck_failed")}
+        if !committed||!dsRunnerValidSnapshot(id)||id.id.Volume!=stage.id.Volume||id.id.FileID!=stage.id.FileID||id.id.Created!=snapshot.id.Created||id.parent!=snapshot.parent||id.acl!=snapshot.acl||digest(actual)!=purpose.pin.OutputSHA||len(actual)!=len(payload)||ctx.Err()!=nil{return errors.Join(errDSRunnerEvidence,dsRunnerFailure("ds_runner_target_postcheck_mismatch"))}
         r.Current=&id.id;r.InstalledVerified=true;r.Reason="installed_rechecked";return nil
     })
-    if err!=nil{r.Qualified=false;r.Prepared=false;r.InstalledVerified=false;r.CleanupFailed=r.CleanupFailed||dsRunnerCleanupFact(err);if errors.Is(err,errDSRunnerCollision){r.Reason="fixed_leaf_collision_preserved"}else if r.CommitAttempted{r.Reason="commit_outcome_requires_reconciliation"}else if len(r.Created)>0{r.Reason="partial_prepare_preserved"}else{r.Reason="qualification_unavailable"}}
+    if err!=nil{r.Qualified=false;r.Prepared=false;r.InstalledVerified=false;r.CleanupFailed=r.CleanupFailed||dsRunnerCleanupFact(err);r.FailureReason=dsRunnerFailureReasonFor(ctx,err);if errors.Is(err,errDSRunnerCollision){r.Reason="fixed_leaf_collision_preserved"}else if r.CommitAttempted{r.Reason="commit_outcome_requires_reconciliation"}else if len(r.Created)>0{r.Reason="partial_prepare_preserved"}else{r.Reason="qualification_unavailable"}}
     return
 }
 func performDSRunnerMaintenance(ctx context.Context,op string,permit *dsRunnerWorkerPermit)dsRunnerMaintenanceResult{
@@ -152,7 +153,7 @@ func runDSRunnerMaintenanceWith(args []string,out io.Writer,launch func(context.
     exe,err:=os.Executable();if err!=nil{return 1};ctx,cancel:=context.WithTimeout(context.Background(),3*time.Minute+10*time.Second);defer cancel()
     child:=launch(context.WithValue(ctx,askResultCompleteKey{},true),exe,dsRunnerWorkerFlag,op);defer clear(child.Raw)
     r,observed:=dsRunnerObserveWorker(op,child)
-    if !observed{r=dsRunnerUnknownResult(op,child.Reaped)}
+    if !observed{r=dsRunnerUnknownResult(op,child.Reaped);r.FailureReason=dsRunnerOuterFailureReason(child)}
     if !writeDSRunnerMaintenanceResult(out,r)||!observed||child.Exit!=0{return 1}
     return 0
 }
@@ -179,6 +180,7 @@ func dsRunnerResultSuccess(op string,r dsRunnerMaintenanceResult)bool{
 // result fields must describe one reachable operation state before forwarding.
 func dsRunnerWorkerResultValid(op string,r dsRunnerMaintenanceResult)bool{
     if !dsRunnerMaintenanceOperation(op)||r.Domain!=dsRunnerMaintenanceDomain||r.Operation!=op||r.Reaped||r.SoftwareReplaceAllowed||r.DataAccessGranted||r.SourceAccessGranted||r.SendAllowed||r.NamespaceLeaseProved{return false}
+    if !dsRunnerFailureReasonFits(op,r){return false}
     switch r.CommitOutcome{
     case dsRunnerCommitNotAttempted:
     case dsRunnerCommitConfirmed,dsRunnerCommitUnconfirmed:if op!="apply"{return false}

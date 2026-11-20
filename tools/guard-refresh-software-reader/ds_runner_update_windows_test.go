@@ -198,6 +198,7 @@ func TestDSRunnerWorkerChild(t *testing.T){
     case "publish-close-failure":s.failPublishClose=true
     case "cancel-after-commit":s.cancelAfterCommit=cancel
     case "acquire-cleanup":access.acquire=func(context.Context)(*dsRunnerCandidate,error){return nil,errors.Join(errGHAGuardUnqualified,errGHAGuardResponseCleanup)}
+    case "acquire-typed":access.acquire=func(context.Context)(*dsRunnerCandidate,error){return nil,errors.Join(errDSRunnerEvidence,dsRunnerPhaseFailure("run","mismatch"))}
     case "open-nil-cleanup":access.open=func(context.Context,dsRunnerRepairPurpose)(dsRunnerTargetSession,error){return nil,errors.Join(errDSRunnerCleanup,errors.New("synthetic constructor close"))}
     default:os.Exit(7)
     }

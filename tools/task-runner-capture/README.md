@@ -26,7 +26,7 @@ with matching Go module and clean source revision. The same open output is
 rechecked before an exclusive export; source proof and capture metadata are
 written without overwriting earlier files. The workflow attests the executable,
 source proof and capture metadata, then retains those exact three files for
-one day. The artifact ID and archive digest come from the upload action and
+seven days. The artifact ID and archive digest come from the upload action and
 must later be reconciled independently with the authenticated run and job.
 
 `data_access_granted`, `update_performed`, `send_allowed` and

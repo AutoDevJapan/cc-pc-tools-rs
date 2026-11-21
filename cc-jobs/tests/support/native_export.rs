@@ -1016,21 +1016,73 @@ fn capture_fixture_child_stream() {
     }
     println!("{{\"type\":\"turn.completed\"}}");
 }
+
+#[cfg(windows)]
+struct CaptureFixtureDiagnostic {path:PathBuf,phase:&'static str,category:&'static str,finished:bool,facts:Value}
+#[cfg(windows)]
+impl CaptureFixtureDiagnostic {
+    fn new(directory:&Path)->Self {
+        let state=Self{path:directory.join("controller-diagnostic.json"),phase:"entered",category:"none",finished:false,facts:Value::Null};
+        state.save();state
+    }
+    fn step(&mut self,phase:&'static str) {self.phase=phase;self.save();}
+    fn save(&self) {
+        let value=json!({"schema":"owned-capture-fixture-diagnostic/1","phase":self.phase,"category":self.category,
+            "finished":self.finished,"unwinding":std::thread::panicking(),"facts":self.facts,"source_scope":"test_owned_controller_only"});
+        assert!(fs::write(&self.path,serde_json::to_vec(&value).unwrap()).is_ok(),"fixture_diagnostic_write_failed");
+    }
+    fn io<T>(&mut self,result:io::Result<T>)->T {
+        match result {Ok(value)=>value,Err(error)=>{
+            self.category=match error.raw_os_error() {Some(5)=>"win32_access_denied",Some(6)=>"win32_invalid_handle",Some(32)=>"win32_sharing_violation",Some(87)=>"win32_invalid_parameter",
+                _=>match error.kind(){io::ErrorKind::PermissionDenied=>"permission_denied",io::ErrorKind::TimedOut=>"timed_out",io::ErrorKind::NotFound=>"not_found",io::ErrorKind::InvalidData=>"invalid_data",_=>"io_failure"}};
+            self.save();panic!("owned_capture_fixture_io_failed");
+        }}
+    }
+    fn app<T>(&mut self,result:crate::Result<T>)->T {
+        match result {Ok(value)=>value,Err(error)=>{
+            self.category=match error.message.as_str() {
+                "native capture input rejected"=>"native_input_rejected",
+                "native capture not admitted"=>"native_capture_not_admitted",
+                "native launch generation mismatch"=>"native_generation_mismatch",
+                "native export generation changed"=>"native_export_generation_changed",
+                _=>if error.code==75 {"job_io_temporarily_unavailable"}else{"job_api_failure"},
+            };
+            self.save();panic!("owned_capture_fixture_api_failed");
+        }}
+    }
+}
+#[cfg(windows)]
+impl Drop for CaptureFixtureDiagnostic {
+    fn drop(&mut self) {
+        if std::thread::panicking()&&self.category=="none" {self.category="assertion_or_panic";}
+        // This fixture owns the directory. Never project panic messages, paths,
+        // environment, raw stdout/stderr or arbitrary OS error strings.
+        let value=json!({"schema":"owned-capture-fixture-diagnostic/1","phase":self.phase,"category":self.category,
+            "finished":self.finished,"unwinding":std::thread::panicking(),"facts":self.facts,"source_scope":"test_owned_controller_only"});
+        let _=fs::write(&self.path,serde_json::to_vec(&value).unwrap_or_default());
+    }
+}
+
 #[cfg(windows)]
 #[test]
 fn capture_job_controller_fixture() {
     use std::os::windows::{io::AsHandle,process::CommandExt};
     let Ok(mode)=std::env::var("CC_NATIVE_CAPTURE_CONTROLLER_MODE")else{return;};
     let directory=PathBuf::from(std::env::var_os("CC_NATIVE_CAPTURE_CONTROLLER_DIR").unwrap());
+    let mut diagnostic=CaptureFixtureDiagnostic::new(&directory);
+    diagnostic.step("create_capture_job");
     let flags=if mode=="breakaway" {0x800}else{0};
-    let mut job=if mode=="outside"{native::empty_fixture_job(flags)}else{native::capture_fixture_job(flags)}.unwrap();
+    let mut job=diagnostic.io(if mode=="outside"{native::empty_fixture_job(flags)}else{native::capture_fixture_job(flags)});
     let mut command=crate::hidden_command(std::env::current_exe().unwrap().to_str().unwrap());
     command.args(["--exact","native_export::tests::capture_fixture_child_stream","--nocapture"])
         .env("CC_NATIVE_CAPTURE_CHILD","1").env("CC_NATIVE_CAPTURE_HOLD",if mode=="reclaim"||mode=="retention"{"1"}else{"0"})
         .current_dir(&directory).stdin(std::process::Stdio::piped()).stdout(std::process::Stdio::piped()).stderr(std::process::Stdio::piped())
         .creation_flags(crate::NO_WINDOW|0x4);
-    let mut child=OwnedFixtureChild{child:command.spawn().unwrap()};
-    let processes=native::Processes::pin(child.child.as_handle(),Some(job.get().unwrap().as_handle())).unwrap();
+    diagnostic.step("spawn_suspended_child");
+    let mut child=OwnedFixtureChild{child:diagnostic.io(command.spawn())};
+    diagnostic.step("pin_same_child_job");
+    let processes=diagnostic.io(native::Processes::pin(child.child.as_handle(),Some(job.get().unwrap().as_handle())));
+    diagnostic.step("observe_launch_membership");
     let before=serde_json::to_value(processes.collect()).unwrap();
     if mode=="breakaway"||mode=="outside" {
         if mode=="breakaway" {
@@ -1038,31 +1090,40 @@ fn capture_job_controller_fixture() {
             assert!(processes.reclaim_children(std::time::Instant::now()+std::time::Duration::from_secs(1)).is_err());
         }else{assert_eq!(before["root_in_owned_job"],"failed");assert_eq!(before["all_job_children_collected"],"unknown");}
         child.child.kill().unwrap();child.child.wait().unwrap();let collection=serde_json::to_value(processes.finish()).unwrap();
-        fs::write(directory.join("controller-result.json"),serde_json::to_vec(&collection).unwrap()).unwrap();job.close().unwrap();return;
+        diagnostic.step("publish_rejected_membership_control");
+        diagnostic.io(fs::write(directory.join("controller-result.json"),serde_json::to_vec(&collection).unwrap()));
+        diagnostic.step("close_rejected_control_job");diagnostic.io(job.close());diagnostic.finished=true;return;
     }
     let root=processes.root();let child_birth=processes.child();
     let rt:crate::SharedRuntime=Arc::new(crate::System::default());
     let context=Context{root:directory.join("root"),jobs:directory.join("jobs"),home:directory.join("home"),codex_home:directory.join("codex"),gto:directory.join("gto.exe"),executable:std::env::current_exe().unwrap(),rt};
-    let jid="owned-capture-job";fs::create_dir_all(context.job_dir(jid)).unwrap();
+    diagnostic.step("create_owned_job_record");
+    let jid="owned-capture-job";diagnostic.io(fs::create_dir_all(context.job_dir(jid)));
     let mut row=json!({"id":jid,"name":"owned fixture","status":"running","native_evidence_purpose":PURPOSE,"started_at":"owned-fixture-generation",
         "pid":root.pid,"pid_created":root.created,"codex_pid":child_birth.pid,"codex_pid_created":child_birth.created,"cwd":directory});
-    context.save(&row).unwrap();let _=processes.finish();
-    let (mut capture,input)=context.begin_native_capture(jid,b"captured-owned-input",&[],child.child.as_handle(),Some(job.get().unwrap().as_handle())).unwrap();
-    let writer=capture.owned_input_writer(input,&mut child.child).unwrap();let input=spawn_owned_thread(NativeThreadRole::CaptureInput,move||writer.write()).unwrap();
-    let mut stdout=capture.stdout(child.child.stdout.take().unwrap()).unwrap();let mut stderr=capture.stderr(child.child.stderr.take().unwrap()).unwrap();
+    diagnostic.step("save_owned_running_record");diagnostic.app(context.save(&row));let _=processes.finish();
+    diagnostic.step("begin_native_capture");
+    let (mut capture,input)=diagnostic.app(context.begin_native_capture(jid,b"captured-owned-input",&[],child.child.as_handle(),Some(job.get().unwrap().as_handle())));
+    diagnostic.step("owned_input_writer");
+    let writer=diagnostic.io(capture.owned_input_writer(input,&mut child.child));
+    let input=diagnostic.io(spawn_owned_thread(NativeThreadRole::CaptureInput,move||writer.write()));
+    diagnostic.step("same_owned_tee_setup");
+    let mut stdout=diagnostic.io(capture.stdout(child.child.stdout.take().unwrap()));
+    let mut stderr=diagnostic.io(capture.stderr(child.child.stderr.take().unwrap()));
     let (release,wait)=std::sync::mpsc::sync_channel::<()>(1);let (entered_tx,entered_rx)=std::sync::mpsc::sync_channel(1);
     let retained=mode=="retention";
     let readers=vec![spawn_owned_thread(NativeThreadRole::CaptureStdout,move||{
         if retained {entered_tx.send(()).unwrap();wait.recv_timeout(std::time::Duration::from_secs(10)).unwrap();}
         stdout.read_to_end(&mut Vec::new()).unwrap();
     }).unwrap(),spawn_owned_thread(NativeThreadRole::CaptureStderr,move||{stderr.read_to_end(&mut Vec::new()).unwrap();}).unwrap()];
-    capture.resume_owned_child(&child.child).unwrap();
+    diagnostic.step("resume_same_child");diagnostic.io(capture.resume_owned_child(&child.child));
     let until=std::time::Instant::now()+std::time::Duration::from_secs(8);
     if mode=="reclaim" {
         while !input.is_finished(){assert!(std::time::Instant::now()<until);std::thread::sleep(std::time::Duration::from_millis(5));}
-        capture.reclaim_owned_children(until).unwrap();
+        diagnostic.step("reclaim_same_job_children");diagnostic.io(capture.reclaim_owned_children(until));
     }
     if retained {
+        diagnostic.step("retention_pending_and_drain");
         entered_rx.recv_timeout(std::time::Duration::from_secs(3)).unwrap();
         while !input.is_finished(){assert!(std::time::Instant::now()<until);std::thread::sleep(std::time::Duration::from_millis(5));}
         assert!(child.child.try_wait().unwrap().is_none());
@@ -1079,21 +1140,35 @@ fn capture_job_controller_fixture() {
         let before_repeat=row["native_export"].clone();drain_retained_attempts(&context,jid);assert!(!has_retained_attempt(jid));assert_eq!(context.load(jid).unwrap()["native_export"],before_repeat);
         fs::write(directory.join("controller-result.json"),serde_json::to_vec(selected.metadata()).unwrap()).unwrap();
     }else{
+        diagnostic.step("wait_same_child");
         loop {if capture.observe_child_wait(&mut child.child).unwrap().is_some(){break;}assert!(std::time::Instant::now()<until);std::thread::sleep(std::time::Duration::from_millis(5));}
+        diagnostic.step("join_raw_readers");
         for reader in readers {while !reader.is_finished(){assert!(std::time::Instant::now()<until);std::thread::sleep(std::time::Duration::from_millis(5));}reader.join().unwrap();}
-        input.join().unwrap().unwrap();
+        diagnostic.step("join_owned_input");input.join().unwrap().unwrap();
+        diagnostic.step("collect_same_job_active_one");
         while serde_json::to_value(capture.processes.collect()).unwrap()["job_active_processes"]!=1 {assert!(std::time::Instant::now()<until);std::thread::sleep(std::time::Duration::from_millis(5));}
         let collection=serde_json::to_value(capture.processes.collect()).unwrap();
         assert_eq!(collection["job_active_processes"],1);assert_eq!(collection["all_job_children_collected"],"confirmed");
         assert_eq!(collection["job_breakaway_disabled"],"confirmed");
-        let finished=capture.finish().unwrap();context.publish_native_export(finished).unwrap();
-        let row=context.load(jid).unwrap();let selected=read_export_artifacts(context.job_dir(jid).join(row["native_export"]["directory"].as_str().unwrap()),&row["native_export"],jid,|_|Ok(())).unwrap();
+        diagnostic.step("finish_original_export");let finished=diagnostic.io(capture.finish());
+        diagnostic.step("publish_same_generation_export");diagnostic.app(context.publish_native_export(finished));
+        diagnostic.step("read_same_export_registration");let row=diagnostic.app(context.load(jid));
+        let selected=diagnostic.io(read_export_artifacts(context.job_dir(jid).join(row["native_export"]["directory"].as_str().unwrap()),&row["native_export"],jid,|_|Ok(())));
+        diagnostic.facts=json!({
+            "original_complete":selected.metadata()["original_complete"].as_bool(),
+            "stdin_closed":selected.metadata()["input"]["writer_closed"]=="confirmed",
+            "stdout_eof":selected.metadata()["stdout"]["eof"]=="confirmed",
+            "stderr_eof":selected.metadata()["stderr"]["eof"]=="confirmed",
+            "std_child_reaped":selected.collection()["std_child_wait"]["reaped"]=="confirmed",
+            "job_active_processes":selected.collection()["os_observation"]["job_active_processes"].as_u64()});
+        diagnostic.step("assert_original_completion");
         assert_eq!(selected.metadata()["original_complete"],true);assert_eq!(selected.metadata()["input"]["writer_closed"],"confirmed");
         assert_eq!(selected.metadata()["stdout"]["eof"],"confirmed");assert_eq!(selected.metadata()["stderr"]["eof"],"confirmed");
         assert_eq!(selected.collection()["std_child_wait"]["reaped"],"confirmed");
         fs::write(directory.join("controller-result.json"),serde_json::to_vec(selected.metadata()).unwrap()).unwrap();
     }
-    job.close().unwrap();
+    diagnostic.step("close_controller_capture_job");diagnostic.io(job.close());
+    diagnostic.step("finished");diagnostic.finished=true;
 }
 #[cfg(windows)]
 #[test]
@@ -1109,7 +1184,26 @@ fn actual_capture_job_reclaim_retention_and_membership_controls() {
         let mut child=OwnedFixtureChild{child:command.spawn().unwrap()};
         native::assign_fixture_child(&guard,&child.child).unwrap();native::resume_child(&child.child).unwrap();
         let until=std::time::Instant::now()+std::time::Duration::from_secs(20);
-        loop {if let Some(status)=child.child.try_wait().unwrap(){assert!(status.success(),"{mode}");break;}
+        loop {if let Some(status)=child.child.try_wait().unwrap(){
+            if !status.success() {
+                let raw=fs::File::open(directory.path().join("controller-diagnostic.json")).ok().and_then(|file| {
+                    let mut bytes=Vec::new();file.take(4097).read_to_end(&mut bytes).ok()?;(bytes.len()<=4096).then_some(bytes)
+                });
+                let record=raw.as_deref().and_then(|raw|serde_json::from_slice::<Value>(raw).ok());
+                let phases=["entered","create_capture_job","spawn_suspended_child","pin_same_child_job","observe_launch_membership","publish_rejected_membership_control","close_rejected_control_job","create_owned_job_record","save_owned_running_record","begin_native_capture","owned_input_writer","same_owned_tee_setup","resume_same_child","reclaim_same_job_children","retention_pending_and_drain","wait_same_child","join_raw_readers","join_owned_input","collect_same_job_active_one","finish_original_export","publish_same_generation_export","read_same_export_registration","assert_original_completion","close_controller_capture_job","finished"];
+                let categories=["none","win32_access_denied","win32_invalid_handle","win32_sharing_violation","win32_invalid_parameter","permission_denied","timed_out","not_found","invalid_data","io_failure","job_api_failure","job_io_temporarily_unavailable","native_input_rejected","native_capture_not_admitted","native_generation_mismatch","native_export_generation_changed","assertion_or_panic"];
+                let phase=record.as_ref().map(|r|s(r,"phase")).filter(|p|phases.contains(p)).unwrap_or("unavailable");
+                let category=record.as_ref().map(|r|s(r,"category")).filter(|p|categories.contains(p)).unwrap_or("unavailable");
+                let facts=record.as_ref().map(|r|&r["facts"]);
+                let original_complete=facts.and_then(|f|f["original_complete"].as_bool());
+                let stdin_closed=facts.and_then(|f|f["stdin_closed"].as_bool());
+                let stdout_eof=facts.and_then(|f|f["stdout_eof"].as_bool());
+                let stderr_eof=facts.and_then(|f|f["stderr_eof"].as_bool());
+                let std_child_reaped=facts.and_then(|f|f["std_child_reaped"].as_bool());
+                let job_active=facts.and_then(|f|f["job_active_processes"].as_u64());
+                panic!("owned_capture_fixture_failed mode={mode} phase={phase} category={category} exit_nonzero=true original_complete={original_complete:?} stdin_closed={stdin_closed:?} stdout_eof={stdout_eof:?} stderr_eof={stderr_eof:?} std_child_reaped={std_child_reaped:?} job_active={job_active:?}");
+            }
+            break;}
             assert!(std::time::Instant::now()<until,"{mode}");std::thread::sleep(std::time::Duration::from_millis(10));}
         let value:Value=serde_json::from_slice(&fs::read(directory.path().join("controller-result.json")).unwrap()).unwrap();
         if mode=="breakaway" {assert_eq!(value["job_breakaway_disabled"],"failed");}
@@ -1193,3 +1287,134 @@ fn progress_owner_drop_waits_for_real_worker_before_returning_failed_business() 
     release_tx.send(()).unwrap();assert!(returned_rx.recv_timeout(std::time::Duration::from_secs(3)).unwrap());worker.join().unwrap();
 }
 
+
+#[test]
+fn progress_timeout_join_observes_the_same_workers_last_done() {
+    use crate::notify::{ProgressCompletion,TaskProgress};
+    for mode in ["normal","sender_drop","panic"] {
+        let dir=tempfile::tempdir().unwrap();
+        let rt:crate::SharedRuntime=Arc::new(crate::System::default());
+        let mut task=TaskProgress::new(None,dir.path().into(),rt);
+        task.shutdown_cap=0.;
+        let (release,wait)=std::sync::mpsc::sync_channel(1);
+        let chosen=mode.to_string();
+        task.completion_test_worker(move|done| {
+            wait.recv_timeout(std::time::Duration::from_secs(3)).unwrap();
+            if chosen=="sender_drop" {drop(done);return;}
+            assert_ne!(chosen,"panic","fixed_worker_panic");
+            done.send(()).unwrap();
+        });
+        let returned=Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let entered=returned.clone();
+        crate::notify::PROGRESS_AFTER_TIMEOUT.with(|hook|*hook.borrow_mut()=Some(Box::new(move|worker_thread:&std::thread::JoinHandle<()>| {
+            release.send(()).unwrap();
+            let until=std::time::Instant::now()+std::time::Duration::from_secs(3);
+            while !worker_thread.is_finished() {
+                assert!(std::time::Instant::now()<until,"worker_did_not_return");
+                std::thread::yield_now();
+            }
+            entered.store(true,std::sync::atomic::Ordering::Release);
+        })));
+        let actual=task.close_status();
+        assert!(returned.load(std::sync::atomic::Ordering::Acquire));
+        assert_eq!(actual,if mode=="normal"{ProgressCompletion::Done}else{ProgressCompletion::Failed});
+        let facts=task.collection_facts();
+        assert_eq!(facts["worker_joined"],true);
+        assert_eq!(facts["done_received"],mode=="normal");
+        assert_eq!(task.close_status(),actual);
+        assert_eq!(task.collection_facts(),facts);
+    }
+}
+
+#[cfg(windows)]
+#[test]
+fn native_terminal_publication_waits_for_notification_and_never_reverses_success() {
+    struct WaitRuntime {start:std::time::Instant,seen:Mutex<Vec<String>>,terminal_saves:std::sync::atomic::AtomicUsize}
+    impl crate::Runtime for WaitRuntime {
+        fn mono(&self)->f64 {self.start.elapsed().as_secs_f64()}
+        fn env(&self)->std::collections::BTreeMap<String,String> {std::collections::BTreeMap::new()}
+        fn diagnostic(&self,_:&str) {}
+        fn proc_created_checked(&self,pid:u32)->io::Result<Option<u64>> {Ok(if pid==std::process::id(){Some(1)}else{None})}
+        fn before_save(&self,path:&Path,row:&Value)->io::Result<()> {
+            if path.file_name().is_some_and(|name|name=="job.json") {
+                let status=s(row,"status").to_string();self.seen.lock().unwrap().push(status.clone());
+                if !crate::LIVE.contains(&status.as_str()) {self.terminal_saves.fetch_add(1,std::sync::atomic::Ordering::SeqCst);}
+            }
+            Ok(())
+        }
+        fn call(&self,_:crate::Call)->io::Result<crate::Reply> {panic!("fixture_external_call_forbidden")}
+        fn spawn(&self,_:&crate::Spawn)->io::Result<Box<dyn crate::Running>> {Err(rejected())}
+        fn spawn_supervisor(&self,_:&Path,_:&Path,_:&Path,_:&str)->io::Result<bool> {Err(rejected())}
+    }
+    for mode in ["normal","panic","sender_drop","business_failed","cancelled","replaced"] {
+        let dir=tempfile::tempdir().unwrap();
+        let observed=Arc::new(WaitRuntime{start:std::time::Instant::now(),seen:Mutex::new(Vec::new()),terminal_saves:std::sync::atomic::AtomicUsize::new(0)});
+        let rt:crate::SharedRuntime=observed.clone();
+        let context=Context{root:dir.path().join("root"),jobs:dir.path().join("jobs"),home:dir.path().join("home"),codex_home:dir.path().join("codex"),gto:dir.path().join("gto.exe"),executable:dir.path().join("no-execution"),rt};
+        let jid="native-notification-final";
+        fs::create_dir_all(context.job_dir(jid)).unwrap();
+        let row=json!({"id":jid,"name":"owned notification fixture","status":"running","native_evidence_purpose":PURPOSE,
+            "started_at":"generation-a","pid":std::process::id(),"pid_created":1,"codex_pid":1234,"codex_pid_created":2,"gto":{"fixture":true}});
+        context.save(&row).unwrap();
+        let mut proposed=row.clone();proposed["status"]=json!(if mode=="business_failed"{"failed"}else{"succeeded"});
+        let mut task=crate::notify::TaskProgress::new(None,context.jobs.clone(),context.rt.clone());task.shutdown_cap=0.01;
+        let (ready_tx,ready_rx)=std::sync::mpsc::sync_channel(1);let (release_tx,release_rx)=std::sync::mpsc::sync_channel(1);let chosen=mode.to_string();
+        task.completion_test_worker(move|done| {
+            ready_tx.send(()).unwrap();release_rx.recv_timeout(std::time::Duration::from_secs(5)).unwrap();
+            if chosen=="sender_drop" {drop(done);return;}
+            assert_ne!(chosen,"panic","fixed_notification_failure");done.send(()).unwrap();
+        });
+        ready_rx.recv_timeout(std::time::Duration::from_secs(3)).unwrap();
+        let mut owner=ProgressOwner::new(task,true);owner.bind_job(&context.job_dir(jid),&row);
+        let publish_context=context.clone();
+        let (done_tx,done_rx)=std::sync::mpsc::sync_channel(1);
+        let publisher=std::thread::Builder::new().spawn(move|| {
+            let value=publish_context.publish_native_terminal_after_notification(&proposed,&mut Some(owner));
+            done_tx.send(value).unwrap();
+        }).unwrap();
+        let until=std::time::Instant::now()+std::time::Duration::from_secs(3);
+        loop {if context.load(jid).unwrap()["native_notification_pending"]==true {break;}
+            assert!(std::time::Instant::now()<until);std::thread::yield_now();}
+        let args=crate::cli::Args{model_explicit:false,sandbox_explicit:false,mcp_profile_explicit:false,cmd:"wait".into(),id:jid.into(),
+            values:std::collections::BTreeMap::from([("timeout".into(),"0".into())]),flags:std::collections::HashSet::new(),add_dirs:vec![]};
+        assert_eq!(context.cmd_wait(&args,&mut Vec::new()).unwrap(),2,"pending_must_not_exit_success");
+        assert_eq!(context.load(jid).unwrap()["status"],"running");assert!(done_rx.try_recv().is_err());
+        assert!(!observed.seen.lock().unwrap().iter().any(|s|s=="succeeded"));
+        if mode=="cancelled"||mode=="replaced" {
+            let _lock=context.job_lock(jid,"state.lock").unwrap();let mut changed=context.load(jid).unwrap();
+            if mode=="cancelled" {changed["status"]=json!("cancelled");changed["cancel_requested"]=json!(true);}
+            else {changed["started_at"]=json!("generation-b");}
+            context.save(&changed).unwrap();
+        }
+        release_tx.send(()).unwrap();let publication=done_rx.recv_timeout(std::time::Duration::from_secs(3)).unwrap().unwrap();publisher.join().unwrap();
+        if mode=="replaced" {assert!(publication.is_none());}else{assert!(publication.is_some());}
+        let final_job=publication.unwrap_or_else(||context.load(jid).unwrap());
+        let expected=if mode=="normal"{"succeeded"}else if mode=="cancelled"{"cancelled"}else if mode=="replaced"{"running"}else{"failed"};
+        assert_eq!(final_job["status"],expected);assert_eq!(context.load(jid).unwrap()["status"],expected);
+        if mode=="replaced" {assert_eq!(final_job["started_at"],"generation-b");assert_eq!(context.cmd_wait(&args,&mut Vec::new()).unwrap(),2);}
+        else {assert_eq!(context.cmd_wait(&args,&mut Vec::new()).unwrap(),if mode=="normal"{0}else{1});}
+        if mode!="cancelled"&&mode!="replaced" {assert_eq!(observed.terminal_saves.load(std::sync::atomic::Ordering::SeqCst),1);}
+        if mode!="normal" {assert!(!observed.seen.lock().unwrap().iter().any(|s|s=="succeeded"));}
+        let snapshot=context.load(jid).unwrap();std::thread::yield_now();assert_eq!(context.load(jid).unwrap(),snapshot);
+    }
+}
+
+#[cfg(windows)]
+#[test]
+fn controller_failure_diagnostic_has_only_fixed_phase_and_category() {
+    for mode in ["io","job","panic"] {
+        let dir=tempfile::tempdir().unwrap();let path=dir.path().join("controller-diagnostic.json");
+        let result=std::panic::catch_unwind(|| {
+            let mut diagnostic=CaptureFixtureDiagnostic::new(dir.path());diagnostic.step("begin_native_capture");
+            match mode {
+                "io"=>diagnostic.io(Err::<(),_>(io::Error::new(io::ErrorKind::PermissionDenied,"private-path-secret-not-to-project"))),
+                "job"=>diagnostic.app(Err::<(),_>(Error::new("private-path-secret-not-to-project"))),
+                _=>panic!("fixed_fixture_panic"),
+            }
+        });
+        assert!(result.is_err());let bytes=fs::read(path).unwrap();assert!(bytes.len()<=4096);
+        assert!(!String::from_utf8_lossy(&bytes).contains("private-path-secret-not-to-project"));
+        let value:Value=serde_json::from_slice(&bytes).unwrap();assert_eq!(value["phase"],"begin_native_capture");assert_eq!(value["unwinding"],true);
+        assert_eq!(value["category"],match mode {"io"=>"permission_denied","job"=>"job_api_failure",_=>"assertion_or_panic"});
+    }
+}

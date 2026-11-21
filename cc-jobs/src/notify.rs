@@ -208,6 +208,12 @@ pub struct Notice {
     pub job: Value,
     pub deadline: f64,
 }
+#[cfg(test)]
+pub(crate) type ProgressTimeoutHook=Box<dyn FnOnce(&thread::JoinHandle<()>)>;
+#[cfg(test)]
+thread_local! {
+    pub(crate) static PROGRESS_AFTER_TIMEOUT: std::cell::RefCell<Option<ProgressTimeoutHook>> = const { std::cell::RefCell::new(None) };
+}
 #[derive(Clone,Copy,Debug,PartialEq,Eq)]
 pub enum ProgressCompletion { Pending, Done, Failed }
 pub struct TaskProgress {
@@ -318,14 +324,27 @@ impl TaskProgress {
                 if let Some(rx)=&self.done {
                     match rx.recv_timeout(deadline.saturating_duration_since(Instant::now())) {
                         Ok(())=>self.done_received=true,
-                        Err(mpsc::RecvTimeoutError::Timeout)=>(),
+                        Err(mpsc::RecvTimeoutError::Timeout)=>{
+                            #[cfg(test)]
+                            PROGRESS_AFTER_TIMEOUT.with(|hook| { if let Some(hook)=hook.borrow_mut().take() { hook(self.worker.as_ref().unwrap()); } });
+                        },
                         Err(mpsc::RecvTimeoutError::Disconnected)=>self.channel_failed=true,
                     }
                 }
             }
             if self.worker.as_ref().is_some_and(thread::JoinHandle::is_finished) {
                 let joined=self.worker.take().unwrap().join();
-                self.worker_joined=true;self.done=None;
+                self.worker_joined=true;
+                // Timeout describes the earlier receive, not the worker's final
+                // state. Join synchronizes the same worker's last send; retain
+                // its receiver until that queued completion has been observed.
+                if !self.done_received&&!self.channel_failed {
+                    match self.done.as_ref().map(mpsc::Receiver::try_recv) {
+                        Some(Ok(()))=>self.done_received=true,
+                        _=>self.channel_failed=true,
+                    }
+                }
+                self.done=None;
                 self.completion=if joined.is_ok()&&self.done_received&&!self.channel_failed {ProgressCompletion::Done}else{ProgressCompletion::Failed};
                 return self.completion;
             }

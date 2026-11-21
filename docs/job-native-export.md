@@ -293,6 +293,16 @@ business run into success. Ordinary nonnative close still returns false at its
 existing shutdown cap while the same live worker remains pending, and can return
 true after normal completion and join. A failed notification delivery remains
 existing notification data, distinct from worker collection.
+For the native purpose, durable job status stays live while this collection is
+pending. Collection runs outside state/queue locks. The final publication then
+rechecks the same job generation and held process identities, current session
+fields and cancellation, and publishes the terminal result once. Existing wait
+consumers cannot observe a succeeded row before a later collection failure.
+The native worker drains already queued notices and is joined before this
+commit. Its final notice is then delivered through the existing bounded notify
+call in the same controller, not through a replacement worker. Delivery failure
+remains notification data and does not reverse the durable result.
+Normal nonnative publication and notification delivery semantics are unchanged.
 
 The readonly shutdown signal stops stdin work and reply forwarding only. It does
 not end raw stdout acquisition. Both connection streams use the original same-

@@ -178,7 +178,59 @@ mod progress_persistence_tests {
         }
     }
 }
+fn native_terminal_attempt_current(proposed:&Value,current:&Value)->bool {
+    proposed["native_evidence_purpose"]=="p33-skill-business-v11"&&
+    current["native_evidence_purpose"]=="p33-skill-business-v11"&&
+    !s(proposed,"started_at").is_empty()&&
+    ["id","started_at","pid","pid_created","codex_pid","codex_pid_created"]
+        .iter().all(|key|proposed[*key]==current[*key])
+}
 impl Context {
+    /// Native terminal status is published once, after the same notification
+    /// owner is joined and its collection record is saved. Collection never
+    /// holds state.lock or the global gate needed by notification consumers.
+    pub(crate) fn publish_native_terminal_after_notification(
+        &self, proposed:&Value, notifier:&mut Option<crate::native_export::ProgressOwner>,
+    )->Result<Option<Value>> {
+        let jid=s(proposed,"id");
+        let (may_publish,before)={
+            let _state=self.job_lock(jid,"state.lock")?;
+            let mut current=self.load(jid)?;
+            let same=native_terminal_attempt_current(proposed,&current);
+            if same&&LIVE.contains(&s(&current,"status"))&&current["cancel_requested"]!=true {
+                current["native_notification_pending"]=json!(true);
+                self.save(&current)?;
+                (true,current)
+            }else{(false,current)}
+        };
+        let collected=if let Some(owner)=notifier.as_mut() {
+            owner.collect()
+        }else{false};
+        let _state=self.job_lock(jid,"state.lock")?;
+        let current=self.load(jid)?;
+        if !may_publish||!native_terminal_attempt_current(proposed,&current)||
+            ["thread_id","resume_session"].iter().any(|key|current[*key]!=before[*key]) {return Ok(None); }
+        let mut final_job=if current["cancel_requested"]==true||!LIVE.contains(&s(&current,"status")) {
+            current.clone()
+        }else{proposed.clone()};
+        // Preserve only the current generation's independently published raw
+        // export registration and delayed collection facts.
+        for key in ["native_export","native_export_pending","native_retention_drained"] {
+            if let Some(value)=current.get(key) {final_job[key]=value.clone();}
+        }
+        final_job["native_notification_pending"]=json!(false);
+        final_job["native_notification_failed"]=json!(!collected);
+        if let Some(owner)=notifier.as_ref() {
+            final_job["native_notification_collection"]=owner.collection_facts();
+        }
+        if !collected&&final_job["status"]=="succeeded" {
+            final_job["status"]=json!("failed");
+            final_job["activity"]=json!("notification worker collection failed");
+            final_job["last_error"]=json!("native notification worker collection failed");
+        }
+        self.save(&final_job)?;
+        Ok(Some(final_job))
+    }
     /// Load saved owner instructions and enforce the current site restriction,
     /// including old saved jobs and both kinds of continuation. Keep the
     /// original input immutable; appending this rule does not elevate scope.
@@ -1826,22 +1878,32 @@ impl Context {
                 }
             }
         }
-        if let Err(error) = self.save(&job) {
-            // Do not notify success or restart a queued attempt before this
-            // transition is durable. Preserve events/output and the failed
-            // snapshot for supervisor recovery, and report the actual failure.
-            self.rt.diagnostic(&format!(
-                "終了状態を保存できません (job={}, status={}); 記録を保持します: {}",
-                s(&job, "id"), s(&job, "status"),
-                redact_local_log_secrets(&error.message, &self.rt.env())
-            ));
-            return Err(error);
+        if native_enabled {
+            drop(todo_guard);
+            drop(state);
+            drop(gate);
+            #[cfg(windows)]
+            drop(chrome_proxy);
+            let Some(final_job)=self.publish_native_terminal_after_notification(&job,&mut notifier)? else {return Ok(false);};
+            job=final_job;
+        }else{
+            if let Err(error) = self.save(&job) {
+                // Do not notify success or restart a queued attempt before this
+                // transition is durable. Preserve events/output and the failed
+                // snapshot for supervisor recovery, and report the actual failure.
+                self.rt.diagnostic(&format!(
+                    "終了状態を保存できません (job={}, status={}); 記録を保持します: {}",
+                    s(&job, "id"), s(&job, "status"),
+                    redact_local_log_secrets(&error.message, &self.rt.env())
+                ));
+                return Err(error);
+            }
+            drop(todo_guard);
+            drop(state);
+            drop(gate);
+            #[cfg(windows)]
+            drop(chrome_proxy);
         }
-        drop(todo_guard);
-        drop(state);
-        drop(gate);
-        #[cfg(windows)]
-        drop(chrome_proxy);
         self.close_chrome_tabs(jid);
         if retry || yielded {
             if let Some(n) = &mut notifier {
@@ -1861,18 +1923,16 @@ impl Context {
                 .stderr(std::process::Stdio::null())
                 .spawn();
         }
-        if let Some(n) = &mut notifier {
-            n.update(&job,true);
+        if let Some(n)=&mut notifier {
             if native_enabled {
-                if !n.collect() {
-                    let _state=self.job_lock(jid,"state.lock")?;let mut current=self.load(jid)?;
-                    if current["started_at"]==job["started_at"] {
-                        current["native_notification_failed"]=json!(true);
-                        if current["status"]=="succeeded"{current["status"]=json!("failed");current["activity"]=json!("notification worker failed after collection");}
-                        self.save(&current)?;
-                    }
-                }
-            }else{n.close();}
+                // The old worker is already joined. Final delivery is bounded
+                // in this same controller, after the durable terminal commit;
+                // delivery failure remains notification data, not a new worker.
+                let _=n.notify_with_retry("finish",&job,self.rt.mono()+NOTIFY_DEADLINE_S);
+            }else{
+                n.update(&job,true);
+                n.close();
+            }
         }
         Ok(false)
     }

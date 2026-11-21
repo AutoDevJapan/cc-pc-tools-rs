@@ -1033,6 +1033,10 @@ impl CaptureFixtureDiagnostic {
     }
     fn io<T>(&mut self,result:io::Result<T>)->T {
         match result {Ok(value)=>value,Err(error)=>{
+            if let Some(failure)=error.get_ref().and_then(|value|value.downcast_ref::<ExportReadFailure>()) {
+                self.phase=match failure.phase {"receipt"=>"read_registered_receipt","collection"=>"read_registered_collection",_=>"read_registered_binding"};
+                self.category=failure.category;self.save();panic!("owned_capture_fixture_read_failed");
+            }
             self.category=match error.raw_os_error() {Some(5)=>"win32_access_denied",Some(6)=>"win32_invalid_handle",Some(32)=>"win32_sharing_violation",Some(87)=>"win32_invalid_parameter",
                 _=>match error.kind(){io::ErrorKind::PermissionDenied=>"permission_denied",io::ErrorKind::TimedOut=>"timed_out",io::ErrorKind::NotFound=>"not_found",io::ErrorKind::InvalidData=>"invalid_data",_=>"io_failure"}};
             self.save();panic!("owned_capture_fixture_io_failed");
@@ -1134,7 +1138,7 @@ fn capture_job_controller_fixture() {
         assert!(context.load(jid).unwrap()["native_export"].is_null());
         release.send(()).unwrap();
         while has_retained_attempt(jid) {assert!(std::time::Instant::now()<until);drain_retained_attempts(&context,jid);std::thread::sleep(std::time::Duration::from_millis(5));}
-        let row=context.load(jid).unwrap();assert_eq!(row["status"],"failed");assert_eq!(row["native_retention_drained"],true);
+        let row=context.load(jid).unwrap();assert_eq!(row["status"],"failed");assert_eq!(row["native_retention_drained"],true);assert_eq!(row["native_retention_drain_failed"],false);
         let selected=read_export_artifacts(context.job_dir(jid).join(row["native_export"]["directory"].as_str().unwrap()),&row["native_export"],jid,|_|Ok(())).unwrap();
         assert_eq!(selected.metadata()["original_complete"],true);assert_eq!(selected.collection()["std_child_wait"]["reaped"],"confirmed");
         let before_repeat=row["native_export"].clone();drain_retained_attempts(&context,jid);assert!(!has_retained_attempt(jid));assert_eq!(context.load(jid).unwrap()["native_export"],before_repeat);
@@ -1190,8 +1194,8 @@ fn actual_capture_job_reclaim_retention_and_membership_controls() {
                     let mut bytes=Vec::new();file.take(4097).read_to_end(&mut bytes).ok()?;(bytes.len()<=4096).then_some(bytes)
                 });
                 let record=raw.as_deref().and_then(|raw|serde_json::from_slice::<Value>(raw).ok());
-                let phases=["entered","create_capture_job","spawn_suspended_child","pin_same_child_job","observe_launch_membership","publish_rejected_membership_control","close_rejected_control_job","create_owned_job_record","save_owned_running_record","begin_native_capture","owned_input_writer","same_owned_tee_setup","resume_same_child","reclaim_same_job_children","retention_pending_and_drain","wait_same_child","join_raw_readers","join_owned_input","collect_same_job_active_one","finish_original_export","publish_same_generation_export","read_same_export_registration","assert_original_completion","close_controller_capture_job","finished"];
-                let categories=["none","win32_access_denied","win32_invalid_handle","win32_sharing_violation","win32_invalid_parameter","permission_denied","timed_out","not_found","invalid_data","io_failure","job_api_failure","job_io_temporarily_unavailable","native_input_rejected","native_capture_not_admitted","native_generation_mismatch","native_export_generation_changed","assertion_or_panic"];
+                let phases=["entered","create_capture_job","spawn_suspended_child","pin_same_child_job","observe_launch_membership","publish_rejected_membership_control","close_rejected_control_job","create_owned_job_record","save_owned_running_record","begin_native_capture","owned_input_writer","same_owned_tee_setup","resume_same_child","reclaim_same_job_children","retention_pending_and_drain","wait_same_child","join_raw_readers","join_owned_input","collect_same_job_active_one","finish_original_export","publish_same_generation_export","read_same_export_registration","assert_original_completion","close_controller_capture_job","finished","read_registered_receipt","read_registered_collection","read_registered_binding"];
+                let categories=["none","win32_access_denied","win32_invalid_handle","win32_sharing_violation","win32_invalid_parameter","permission_denied","timed_out","not_found","invalid_data","io_failure","job_api_failure","job_io_temporarily_unavailable","native_input_rejected","native_capture_not_admitted","native_generation_mismatch","native_export_generation_changed","assertion_or_panic","stable_read_failed","fact_encoding_failed","registered_fact_mismatch","strict_json_rejected","attempt_binding_mismatch","receipt_collection_mismatch"];
                 let phase=record.as_ref().map(|r|s(r,"phase")).filter(|p|phases.contains(p)).unwrap_or("unavailable");
                 let category=record.as_ref().map(|r|s(r,"category")).filter(|p|categories.contains(p)).unwrap_or("unavailable");
                 let facts=record.as_ref().map(|r|&r["facts"]);
@@ -1417,4 +1421,131 @@ fn controller_failure_diagnostic_has_only_fixed_phase_and_category() {
         let value:Value=serde_json::from_slice(&bytes).unwrap();assert_eq!(value["phase"],"begin_native_capture");assert_eq!(value["unwinding"],true);
         assert_eq!(value["category"],match mode {"io"=>"permission_denied","job"=>"job_api_failure",_=>"assertion_or_panic"});
     }
+}
+
+struct NotificationLifecycleRuntime {
+    clock:Mutex<f64>,tools:PathBuf,calls:Mutex<Vec<String>>,statuses:Mutex<Vec<String>>,row:PathBuf,
+    start_fails:bool,finish_fails:bool,update_fails:bool,panic_update:bool,
+}
+impl crate::Runtime for NotificationLifecycleRuntime {
+    fn mono(&self)->f64 {*self.clock.lock().unwrap()}
+    fn sleep(&self,seconds:f64) {*self.clock.lock().unwrap()+=seconds;std::thread::yield_now();}
+    fn env(&self)->std::collections::BTreeMap<String,String> {std::collections::BTreeMap::new()}
+    fn task_title_tools(&self)->PathBuf {self.tools.clone()}
+    fn task_job_title(&self,_:&Value,_:&str)->io::Result<String> {Ok("owned notification fixture".into())}
+    fn call(&self,call:crate::Call)->io::Result<crate::Reply> {
+        assert_eq!(call.argv.get(1).map(String::as_str),Some("notify"));
+        assert_eq!(call.argv.get(2).map(String::as_str),Some("task"));
+        let action=call.argv.get(3).unwrap().clone();assert!(["start","update","finish"].contains(&action.as_str()));
+        self.calls.lock().unwrap().push(action.clone());
+        let row:Value=serde_json::from_slice(&fs::read(&self.row).unwrap()).unwrap();
+        self.statuses.lock().unwrap().push(s(&row,"status").to_string());
+        if action=="update"&&self.panic_update {panic!("fixed_notification_fixture_panic");}
+        let accepted=match action.as_str() {"start"=>!self.start_fails,"update"=>!self.update_fails,_=>!self.finish_fails};
+        Ok(crate::Reply{code:0,stdout:json!({"ok":accepted}).to_string().into_bytes(),stderr:vec![]})
+    }
+    fn spawn(&self,_:&crate::Spawn)->io::Result<Box<dyn crate::Running>> {Err(rejected())}
+    fn spawn_supervisor(&self,_:&Path,_:&Path,_:&Path,_:&str)->io::Result<bool> {Err(rejected())}
+}
+fn notification_lifecycle_fixture(directory:&Path,mode:&str)->(Context,Value,Arc<NotificationLifecycleRuntime>) {
+    let tools=directory.join("title-tools");fs::create_dir_all(&tools).unwrap();
+    fs::write(tools.join("client-projects.txt"),b"SyntheticFixture\n").unwrap();
+    let jobs=directory.join("jobs");let jid="owned-notice-lifecycle";fs::create_dir_all(jobs.join(jid)).unwrap();
+    let observed=Arc::new(NotificationLifecycleRuntime{clock:Mutex::new(100.),tools,calls:Mutex::new(Vec::new()),statuses:Mutex::new(Vec::new()),row:jobs.join(jid).join("job.json"),
+        start_fails:mode=="start_failed",finish_fails:mode=="finish_failed",update_fails:mode=="update_failed",panic_update:mode=="worker_panicked"});
+    let rt:crate::SharedRuntime=observed.clone();
+    let context=Context{root:directory.join("root"),jobs,home:directory.join("home"),codex_home:directory.join("codex"),gto:directory.join("gto.exe"),executable:directory.join("no-launch"),rt};
+    let row=json!({"id":jid,"name":"owned notification fixture","status":"running","native_evidence_purpose":PURPOSE,
+        "started_at":"owned-generation","pid":std::process::id(),"pid_created":1,"codex_pid":1234,"codex_pid_created":2,"gto":{"fixture":true}});
+    context.save(&row).unwrap();fs::write(context.job_dir(jid).join("prompt.md"),b"owned fixture").unwrap();
+    (context,row,observed)
+}
+#[cfg(windows)]
+#[test]
+fn native_notification_start_gate_delivery_and_collection_have_one_lifecycle() {
+    for mode in ["normal","cancelled","start_failed","finish_failed","update_failed","worker_panicked"] {
+        let dir=tempfile::tempdir().unwrap();let (context,row,observed)=notification_lifecycle_fixture(dir.path(),mode);
+        let mut task=crate::notify::TaskProgress::new(Some("fixture-notifier-no-process".into()),context.jobs.clone(),context.rt.clone());
+        task.shutdown_cap=3.;let mut owner=ProgressOwner::new(task,true);owner.bind_job(&context.job_dir(s(&row,"id")),&row);owner.start(&row);
+        let mut proposed=row.clone();proposed["status"]=json!(if mode=="cancelled"{"cancelled"}else{"succeeded"});
+        if mode=="update_failed"||mode=="worker_panicked" {
+            *observed.clock.lock().unwrap()=116.;owner.update(&row,false);
+        }
+        let mut notifier=Some(owner);
+        assert!(!notifier.as_ref().unwrap().notify_with_retry("finish",&proposed,context.rt.mono()+35.));
+        let published=context.publish_native_terminal_after_notification(&proposed,&mut notifier).unwrap().unwrap();
+        let joined_facts=notifier.as_ref().unwrap().collection_facts();assert_eq!(joined_facts["worker_joined"],true);
+        assert_eq!(joined_facts["delivery"]["finish_attempts"],0);
+        assert_eq!(published["status"],if mode=="worker_panicked"{"failed"}else if mode=="cancelled"{"cancelled"}else{"succeeded"});
+        let mut wrong_attempt=published.clone();wrong_attempt["started_at"]=json!("not-the-owned-generation");
+        let before_wrong=observed.calls.lock().unwrap().clone();
+        assert!(notifier.as_mut().unwrap().deliver_published_terminal(&context,&wrong_attempt).is_err());
+        assert_eq!(*observed.calls.lock().unwrap(),before_wrong);
+        notifier.as_mut().unwrap().deliver_published_terminal(&context,&published).unwrap();
+        let collection=notifier.as_ref().unwrap().collection_facts();let delivery=notifier.as_ref().unwrap().delivery_facts();
+        let calls=observed.calls.lock().unwrap().clone();
+        if mode=="start_failed" {
+            assert_eq!(calls,["start";4]);assert_eq!(delivery["start"],"failed");assert_eq!(delivery["start_attempts"],4);
+            assert_eq!(delivery["finish_attempts"],0);assert_eq!(delivery["finish"],"suppressed");assert_eq!(delivery["finish_claimed"],false);
+            assert_eq!(collection["state"],"done");
+        }else if mode=="worker_panicked" {
+            assert_eq!(calls,["start","update"]);assert_eq!(collection["state"],"failed");assert_eq!(delivery["finish_attempts"],0);
+        }else{
+            let finishes=calls.iter().filter(|action|*action=="finish").count();assert_eq!(finishes,if mode=="finish_failed"{4}else{1});
+            assert_eq!(delivery["start"],"accepted");assert_eq!(delivery["start_attempts"],1);assert_eq!(delivery["finish_claimed"],true);
+            assert_eq!(delivery["finish"],if mode=="finish_failed"{"failed"}else{"accepted"});
+            if mode=="update_failed" {assert_eq!(delivery["updates_failed"],1);}
+        }
+        let statuses=observed.statuses.lock().unwrap().clone();
+        for (action,status) in calls.iter().zip(statuses) {
+            if action=="finish" {assert_eq!(status,s(&published,"status"));}else{assert_eq!(status,"running");}
+        }
+        let report:Value=serde_json::from_slice(&fs::read(context.job_dir(s(&row,"id")).join("notification-delivery.private.json")).unwrap()).unwrap();
+        assert_eq!(report["terminal_published"],true);assert_eq!(report["collection"]["delivery"],delivery);
+        assert_eq!(report["binding"]["started_at"],row["started_at"]);assert_eq!(context.load(s(&row,"id")).unwrap()["status"],published["status"]);
+        let calls_before=observed.calls.lock().unwrap().clone();let facts_before=notifier.as_ref().unwrap().collection_facts();
+        let _=notifier.as_mut().unwrap().close();let _=notifier.as_mut().unwrap().close();
+        assert_eq!(notifier.as_ref().unwrap().collection_facts(),facts_before);
+        assert!(notifier.as_mut().unwrap().deliver_published_terminal(&context,&published).is_err());
+        assert_eq!(*observed.calls.lock().unwrap(),calls_before);
+    }
+}
+#[test]
+fn ordinary_and_cancellation_notifications_keep_the_actual_start_gate() {
+    for mode in ["normal","start_failed","cancelled","cancelled_start_failed"] {
+        let dir=tempfile::tempdir().unwrap();let failed=mode.ends_with("start_failed");
+        let (context,mut row,observed)=notification_lifecycle_fixture(dir.path(),if failed{"start_failed"}else{"normal"});
+        row["status"]=json!(if mode.starts_with("cancelled"){"cancelled"}else{"succeeded"});context.save(&row).unwrap();
+        if mode.starts_with("cancelled") {
+            crate::notify::task_cancel(&row,Some("fixture-notifier-no-process".into()),context.jobs.clone(),context.rt.clone());
+        }else{
+            let mut task=crate::notify::TaskProgress::new(Some("fixture-notifier-no-process".into()),context.jobs.clone(),context.rt.clone());
+            task.shutdown_cap=3.;task.start(&row);task.update(&row,true);assert!(task.close());
+            assert_eq!(task.delivery_facts()["start"],if failed{"failed"}else{"accepted"});
+            let before=task.collection_facts();assert!(task.close());assert_eq!(task.collection_facts(),before);
+        }
+        let calls=observed.calls.lock().unwrap().clone();assert_eq!(calls,if failed{vec!["start";4]}else{vec!["start","finish"]});
+    }
+}
+
+#[cfg(windows)]
+#[test]
+fn registered_export_components_keep_exact_facts_and_fixed_failure_categories() {
+    let dir=tempfile::tempdir().unwrap();let path=dir.path().join("component.json");
+    let expected=save_json(&path,&json!({"value":"owned"}),MAX_RECEIPT).unwrap();
+    let expected=serde_json::to_value(expected).unwrap();
+    assert_eq!(load_export_component(&path,&expected,MAX_RECEIPT,"receipt").unwrap()["value"],"owned");
+    for key in ["name","bytes","sha256","identity"] {
+        let mut changed=expected.clone();changed[key]=Value::Null;
+        let error=load_export_component(&path,&changed,MAX_RECEIPT,"receipt").unwrap_err();
+        let failure=error.get_ref().and_then(|e|e.downcast_ref::<ExportReadFailure>()).unwrap();
+        assert_eq!(failure.phase,"receipt");assert_eq!(failure.category,"registered_fact_mismatch");
+        assert!(!error.to_string().contains(&path.to_string_lossy().into_owned()));
+    }
+    let error=load_export_component(&dir.path().join("missing"),&expected,MAX_RECEIPT,"binding").unwrap_err();
+    let failure=error.get_ref().and_then(|e|e.downcast_ref::<ExportReadFailure>()).unwrap();
+    assert_eq!(failure.phase,"binding");assert_eq!(failure.category,"stable_read_failed");
+    let malformed=dir.path().join("malformed.json");let bad=save_new(&malformed,b"{bad-json").unwrap();
+    let error=load_export_component(&malformed,&serde_json::to_value(bad).unwrap(),MAX_RECEIPT,"collection").unwrap_err();
+    let failure=error.get_ref().and_then(|e|e.downcast_ref::<ExportReadFailure>()).unwrap();assert_eq!(failure.category,"strict_json_rejected");
 }

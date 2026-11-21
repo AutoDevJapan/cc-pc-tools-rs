@@ -309,6 +309,7 @@ fn save_new_bounded(path:&Path,bytes:&[u8],limit:u64)->io::Result<FileFact> {
 }
 
 
+#[cfg(test)]
 fn load_json_fact(path:&Path,expected:&Value,limit:u64)->io::Result<Value> {
     let (raw,fact)=stable_read(path,limit)?;
     if serde_json::to_value(fact).map_err(|_|rejected())?!=*expected{return Err(rejected());}
@@ -557,9 +558,7 @@ impl<R:Read> Read for OriginalStream<R> {
                 }
             }else{state.persisted=Observed::Failed;return Err(rejected());}
             if state.eof!=Observed::Failed{state.eof=Observed::Confirmed;}
-            if let Some(binding)=&self.binding {
-                if !self.pending.is_empty(){binding.lock().map_err(|_|rejected())?.observe(&self.pending);self.pending.clear();}
-            }
+            if let Some(binding)=&self.binding&&!self.pending.is_empty(){binding.lock().map_err(|_|rejected())?.observe(&self.pending);self.pending.clear();}
             return Ok(0);
         }
         let mut state=self.state.lock().map_err(|_|rejected())?;
@@ -690,16 +689,35 @@ impl Context {
     }
 }
 
+
+#[derive(Debug)]
+struct ExportReadFailure {phase:&'static str,category:&'static str,primary:Option<io::Error>}
+impl std::fmt::Display for ExportReadFailure {
+    fn fmt(&self,f:&mut std::fmt::Formatter<'_>)->std::fmt::Result {write!(f,"native_export_read_failed phase={} category={}",self.phase,self.category)}
+}
+impl std::error::Error for ExportReadFailure {
+    fn source(&self)->Option<&(dyn std::error::Error+'static)> {self.primary.as_ref().map(|error|error as &(dyn std::error::Error+'static))}
+}
+fn export_read_failure(phase:&'static str,category:&'static str,primary:Option<io::Error>)->io::Error {
+    io::Error::other(ExportReadFailure{phase,category,primary})
+}
+fn load_export_component(path:&Path,expected:&Value,limit:u64,phase:&'static str)->io::Result<Value> {
+    let (raw,fact)=stable_read(path,limit).map_err(|primary|export_read_failure(phase,"stable_read_failed",Some(primary)))?;
+    let actual=serde_json::to_value(fact).map_err(|_|export_read_failure(phase,"fact_encoding_failed",None))?;
+    if actual!=*expected {return Err(export_read_failure(phase,"registered_fact_mismatch",None));}
+    strict_value(&raw).map_err(|primary|export_read_failure(phase,"strict_json_rejected",Some(primary)))
+}
+
 fn read_export_artifacts(directory:PathBuf,reg:&Value,jid:&str,mut qualify:impl FnMut(&Path)->io::Result<()>)->io::Result<SelectedExport> {
 qualify(&directory.join("export.private.json"))?;
-let receipt=load_json_fact(&directory.join("export.private.json"),&reg["receipt"],MAX_RECEIPT)?;
+let receipt=load_export_component(&directory.join("export.private.json"),&reg["receipt"],MAX_RECEIPT,"receipt")?;
 if receipt["domain"]!=DOMAIN||receipt["purpose"]!=PURPOSE||receipt["job_id"]!=jid||receipt["started_at"]!=reg["started_at"]||
-    receipt["root"]!=reg["root"]||receipt["child"]!=reg["child"]{return Err(rejected());}
+    receipt["root"]!=reg["root"]||receipt["child"]!=reg["child"]{return Err(export_read_failure("receipt","attempt_binding_mismatch",None));}
 qualify(&directory.join("collection.private.json"))?;
-let collection=load_json_fact(&directory.join("collection.private.json"),&reg["collection"],MAX_RECEIPT)?;
-if collection!=receipt["collection"]{return Err(rejected());}
+let collection=load_export_component(&directory.join("collection.private.json"),&reg["collection"],MAX_RECEIPT,"collection")?;
+if collection!=receipt["collection"]{return Err(export_read_failure("collection","receipt_collection_mismatch",None));}
 qualify(&directory.join("binding.private.json"))?;
-let binding=load_json_fact(&directory.join("binding.private.json"),&receipt["binding"],MAX_BINDING)?;
+let binding=load_export_component(&directory.join("binding.private.json"),&receipt["binding"],MAX_BINDING,"binding")?;
 Ok(SelectedExport{directory,receipt,collection,binding})
 }
 
@@ -730,6 +748,31 @@ impl ProgressOwner {
         self.closed&&!self.failed&&status==ProgressCompletion::Done
     }
     pub(crate) fn collect(&mut self)->bool {completion_barrier(||{let _=self.close();self.closed});!self.failed}
+    pub(crate) fn deliver_published_terminal(&mut self,context:&Context,job:&Value)->io::Result<()> {
+        if job["native_evidence_purpose"]!=PURPOSE||!crate::TERMINAL.contains(&s(job,"status")) {return Err(rejected());}
+        let Some((_,binding))=&self.report else {return Err(rejected());};
+        if binding["job_id"]!=job["id"]||binding["started_at"]!=job["started_at"]||
+            binding["root_pid"]!=job["pid"]||binding["root_created"]!=job["pid_created"] {return Err(rejected());}
+        {
+            let _state=context.job_lock(s(job,"id"),"state.lock").map_err(|_|rejected())?;
+            let durable=context.load(s(job,"id")).map_err(|_|rejected())?;
+            if ["id","started_at","pid","pid_created","codex_pid","codex_pid_created","status"]
+                .iter().any(|key|durable[*key]!=job[*key]) {return Err(rejected());}
+        }
+        if !self.closed||self.failed {
+            self.progress.suppress_final_delivery("owner_collection_failed");
+        }else{
+            self.progress.finish_after_collection(job);
+        }
+        if let Some((path,binding))=&self.report {
+            let receipt=json!({"domain":"native-notification-delivery/1","binding":binding,
+                "terminal_status":job["status"],"terminal_published":true,
+                "collection":self.progress.collection_facts(),"collection_failed":self.failed,
+                "scope":"same_owner_delivery_observation_not_runtime_admission"});
+            save_json(&path.with_file_name("notification-delivery.private.json"),&receipt,MAX_RECEIPT)?;
+        }
+        Ok(())
+    }
 }
 impl std::ops::Deref for ProgressOwner {type Target=crate::notify::TaskProgress;fn deref(&self)->&Self::Target{&self.progress}}
 impl std::ops::DerefMut for ProgressOwner {fn deref_mut(&mut self)->&mut Self::Target{&mut self.progress}}
@@ -816,9 +859,7 @@ impl ReadonlyTransport for ConnectedReadonly {
             let raw=self.replies.recv_timeout(left).map_err(|_|rejected())??;
             if raw.is_empty()||raw.len()>limit{return Err(rejected());}
             let timeliness=if self.received_at()>=self.deadline{ReplyTimeliness::DeadlineElapsed}else{ReplyTimeliness::InTime};
-            if timeliness==ReplyTimeliness::InTime {
-                if let Ok(frame)=strict_value(&raw){if frame["id"].is_null()&&frame["method"].as_str().is_some(){continue;}}
-            }
+            if timeliness==ReplyTimeliness::InTime&&let Ok(frame)=strict_value(&raw)&&frame["id"].is_null()&&frame["method"].as_str().is_some(){continue;}
             return Ok(ReceivedReply::received(raw,timeliness));
         }
         Err(rejected())
@@ -1246,17 +1287,15 @@ mod native {
                 if !state.facts.child_wait&&!state.facts.child_terminate.attempted{
                     let child=&mut state.child;state.facts.child_terminate.call(|_|child.kill());
                 }
-                if !state.facts.job_terminate.attempted{
-                    // Attempt is recorded before the native call, including an
-                    // error. A later natural exit cannot erase this event.
-                    if let Ok(job)=state.job.get(){
+                // Attempt is recorded before the native call, including an
+                // error. A later natural exit cannot erase this event.
+                if !state.facts.job_terminate.attempted&&let Ok(job)=state.job.get(){
                         let raw=job.as_raw_handle() as HANDLE;
                         state.facts.job_terminate.call(|_|{
                             if unsafe{windows_sys::Win32::System::JobObjects::TerminateJobObject(raw,1)}==0{
                                 Err(io::Error::last_os_error())
                             }else{Ok(())}
                         });
-                    }
                 }
             }
             std::thread::sleep(std::time::Duration::from_millis(10));
@@ -1277,10 +1316,8 @@ mod native {
         },|receipt,complete|{
             let filename=if !initial_saved{initial_saved=true;Some("connection-collection.private.json")}
                 else if complete{Some("connection-collection-drained.private.json")}else{None};
-            if let Some(filename)=filename{
-                if let Err(error)=save_json(&directory.join(filename),receipt,MAX_RECEIPT){
-                    last_error=Some(match last_error.take(){None=>error,Some(primary)=>io::Error::other(PrimaryAndCloseFailure{primary,cleanup:error})});
-                }
+            if let Some(filename)=filename&&let Err(error)=save_json(&directory.join(filename),receipt,MAX_RECEIPT){
+                last_error=Some(match last_error.take(){None=>error,Some(primary)=>io::Error::other(PrimaryAndCloseFailure{primary,cleanup:error})});
             }
         });
         if let Some(error)=last_error{return Err(error);}
@@ -1749,14 +1786,12 @@ pub(crate) fn drain_retained_attempts(context:&Context,jid:&str) {
         if let Some(capture)=attempt.capture.take(){
             match capture.finish(){Ok(finished)=>{if context.publish_native_export(finished).is_err(){failed=true;}},Err(_)=>failed=true}
         }
-        if let Ok(_lock)=context.job_lock(jid,"state.lock"){
-            if let Ok(mut row)=context.load(jid){
+        if let Ok(_lock)=context.job_lock(jid,"state.lock")&&let Ok(mut row)=context.load(jid){
                 if row["started_at"]!=attempt.generation||row["pid_created"]!=attempt.root_created||row["codex_pid_created"]!=attempt.child_created{continue;}
                 row["native_retention_drained"]=json!(true);row["native_retention_drain_failed"]=json!(failed);
                 // Preserve lost/failure and the original incomplete receipt. A
                 // later drain is not a successful rerun of the business task.
                 let _=context.save(&row);
-            }
         }
     }
 }

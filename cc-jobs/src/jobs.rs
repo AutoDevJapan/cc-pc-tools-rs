@@ -1670,13 +1670,11 @@ impl Context {
             {
                 // Keep the exact normal Job and Child alive through all pump
                 // joins. The producer records unknown if collection cannot finish.
-                if native_capture.is_none() {
-                    if let Some(process)=proc.as_mut() {
+                if native_capture.is_none()&&let Some(process)=proc.as_mut() {
                         let deadline=std::time::Instant::now()+std::time::Duration::from_secs(5);
                         if !matches!(process.poll(),Ok(Some(_))){let _=process.kill();}
                         while !matches!(process.poll(),Ok(Some(_)))&&std::time::Instant::now()<deadline{self.rt.sleep(0.02);}
                         if !matches!(process.poll(),Ok(Some(_))){cleanup_failed=true;}
-                    }
                 }
                 if let (Some(capture),Some(process))=(native_capture.as_mut(),proc.as_mut()) {
                     let deadline=std::time::Instant::now()+std::time::Duration::from_secs(5);
@@ -1698,9 +1696,7 @@ impl Context {
                 };
             if uncollected {
                 cleanup_failed=true;
-                if let Some(process)=proc.take() {
-                    if crate::native_export::retain_native_attempt(self,&job,process,native_capture.take(),std::mem::take(&mut native_readers),native_input.take()).is_err(){job["native_retention_receipt_failed"]=json!(true);}
-                }
+                if let Some(process)=proc.take()&&crate::native_export::retain_native_attempt(self,&job,process,native_capture.take(),std::mem::take(&mut native_readers),native_input.take()).is_err(){job["native_retention_receipt_failed"]=json!(true);}
             }
             for reader in native_readers.drain(..) {
                 if reader.is_finished(){if reader.join().is_err(){cleanup_failed=true;}}
@@ -1711,9 +1707,7 @@ impl Context {
                 else {cleanup_failed=true;crate::native_export::retain_input(input);}
             }
             #[cfg(windows)]
-            if let Some(process)=proc.take(){
-                if process.close_owned_process().is_err(){cleanup_failed=true;job["native_primary_handle_close_failed"]=json!(true);}
-            }
+            if let Some(process)=proc.take()&&process.close_owned_process().is_err(){cleanup_failed=true;job["native_primary_handle_close_failed"]=json!(true);}
             if let Some(capture)=native_capture.take() {
                 match capture.finish().and_then(|finished|self.publish_native_export(finished).map_err(|error|std::io::Error::other(error.message))) {
                     Ok(())=>(),Err(error)=>{cleanup_failed=true;job["native_export_error"]=json!(redact_local_log_secrets(&error.to_string(),&self.rt.env()));}
@@ -1722,9 +1716,7 @@ impl Context {
             if cleanup_failed {job["native_collection_failed"]=json!(true);}
             // Publishing has its own locked CAS. Keep that exact registration in
             // the later terminal snapshot; do not overwrite it with the old copy.
-            if let Ok(current)=self.load(jid){
-                if current["started_at"]==job["started_at"] {job["native_export"]=current["native_export"].clone();job["native_export_pending"]=current["native_export_pending"].clone();}
-            }
+            if let Ok(current)=self.load(jid)&&current["started_at"]==job["started_at"] {job["native_export"]=current["native_export"].clone();job["native_export_pending"]=current["native_export_pending"].clone();}
         }
         // A queued job cancelled before the second load must never be rewritten by this supervisor.
         if !attempt_failed && proc.is_none() && s(&job, "status") != "running" {
@@ -1925,10 +1917,11 @@ impl Context {
         }
         if let Some(n)=&mut notifier {
             if native_enabled {
-                // The old worker is already joined. Final delivery is bounded
-                // in this same controller, after the durable terminal commit;
-                // delivery failure remains notification data, not a new worker.
-                let _=n.notify_with_retry("finish",&job,self.rt.mono()+NOTIFY_DEADLINE_S);
+                // Delivery still belongs to the same start-gated lifecycle;
+                // join alone never establishes that start was accepted.
+                if n.deliver_published_terminal(self,&job).is_err() {
+                    self.rt.diagnostic("native notification delivery receipt unavailable");
+                }
             }else{
                 n.update(&job,true);
                 n.close();

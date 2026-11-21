@@ -331,3 +331,43 @@ original evidence in place and another request for that directory is refused.
 The capture Job can include normally inherited supervisor helper processes;
 active-count and same-owner cleanup observations therefore remain conservative
 and are not proof about unrelated or external processes.
+
+## One notification lifecycle, two independent outcomes
+
+The same TaskProgress instance owns a delivery lifecycle shared with its actual
+worker. Only the start retry's observed ao_notify acceptance opens the gate for
+updates and finish. Four failed start attempts leave start failed and finish
+suppressed, even when the worker returns normally and is successfully joined.
+A joined worker and a successful notification delivery are separate facts.
+
+Ordinary completion and cancellation still use the worker's original start
+gate. Native final delivery runs in the same controller after collection and
+one durable terminal publication, but must claim finish through that exact
+lifecycle and matching job generation. It does not create a replacement worker.
+A finish claim is consumed once, with the existing four-attempt/deadline bound.
+Failed delivery is recorded without reversing the published business result;
+failed worker collection still prevents native business success.
+
+The pre-publication notification-collection receipt remains immutable. A
+separate CreateNew notification-delivery.private.json records the same owner,
+terminal status, actual start/update/finish attempt outcomes and worker facts
+after publication. Neither receipt grants runtime access. Closing again does
+not restart a worker or repeat a finish attempt. Pending collection, failed
+start, failed delivery and failed collection are never collapsed into one bool.
+
+The existing TaskProgress finish-retry entry also consumes this same finish
+claim and requires confirmed collection; it cannot bypass the observed start
+gate. Calling it before collection or with another attempt refuses the call
+without consuming the later legitimate finish. The generic low-level notification
+retry remains available for existing standalone calls, and never mints a
+TaskProgress worker's accepted-start state.
+
+Registered-export read diagnostics distinguish receipt, collection and binding
+components using fixed categories (stable read, exact registered fact, strict
+JSON, attempt binding, collection equality). Validation remains exact. A category
+is not proof of an OS/kernel cause or permission to accept a different object.
+
+The actual nested-Job capture fixture requires process-per-test isolation (the
+normal nextest execution used by CI). Its controller is assigned irreversibly to
+its test-owned Job. The helper entry tests do nothing without their controlled
+environment; their standalone PASS does not count as an actual owned capture.

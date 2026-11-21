@@ -21,6 +21,7 @@ pub fn help_text(command: &str) -> &'static str {
         "rename-project" => {
             "usage: codex_jobs.exe rename-project <id> --from <name> --to <name>\n\nRename only this job's project, name and task_title under state.lock. Execution paths and identifiers are preserved.\n"
         }
+        "export-native"=>"usage: codex_jobs.exe export-native <exact-job-id> [--part metadata|prompt|stdout|stderr|origin]\n\nRead only one normally admitted job generation; never selects a history path, creates a thread or starts an AI turn.\n",
         "run" => include_str!("../tests/fixtures/help-run.txt"),
         "status" => include_str!("../tests/fixtures/help-status.txt"),
         "tail" => include_str!("../tests/fixtures/help-tail.txt"),
@@ -116,6 +117,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
         "recover-children",
         "cleanup-supervisors",
         "rename-project",
+        "export-native",
     ]
     .contains(&cmd.as_str())
     {
@@ -195,10 +197,12 @@ pub fn parse(args: &[String]) -> Result<Args> {
                     "subwork-of",
                     "assigned-needs",
                     "pr-url",
+                    "native-evidence-purpose",
                 ]
                 .contains(&name.as_str()),
                 "status" => ["all", "json", "summary", "job-id", "purpose"].contains(&name.as_str()),
                 "tail" => ["n", "follow"].contains(&name.as_str()),
+                "export-native"=>name=="part",
                 "wait" => name == "timeout",
                 "watch" => name == "interval",
                 "rate" => ["quality", "task-type", "notes", "force"].contains(&name.as_str()),
@@ -271,6 +275,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
                 "rate",
                 "_supervise",
                 "rename-project",
+                "export-native",
             ]
             .contains(&cmd.as_str())
         {
@@ -346,6 +351,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
         "rate",
         "_supervise",
         "rename-project",
+        "export-native",
     ]
     .contains(&cmd.as_str())
         && a.id.is_empty()
@@ -515,6 +521,7 @@ impl Context {
                 Ok(0)
             }
             "run" => self.cmd_run(&a, out, err),
+            "export-native"=>self.cmd_native_export(&a.id,a.value("part").unwrap_or("metadata"),out),
             "status" => self.cmd_status(&a, out),
             "cleanup-supervisors" => {
                 writeln!(
@@ -661,6 +668,7 @@ impl Context {
     }
     pub fn cmd_run(&self, a: &Args, out: &mut dyn Write, err: &mut dyn Write) -> Result<i32> {
         original_product_retry_key(a)?;
+        if let Some(purpose)=a.value("native-evidence-purpose"){crate::native_export::validate_request_purpose(purpose)?;}
         if let Some(key) = a.value("launch-key") {
             if key.len() != 32
                 || !key
@@ -744,6 +752,11 @@ impl Context {
     // A launch receipt is reusable after a crash/bind/expiry, but only for the
     // identical request. Never create or restart a supervisor during replay.
     fn validate_product_retry_replay(&self, a: &Args, job: &Value) -> Result<()> {
+        if a.value("native-evidence-purpose").is_some()||job.get("native_evidence_purpose").is_some() {
+            if job["native_evidence_purpose"].as_str()!=a.value("native-evidence-purpose"){return Err(Error::new("native purpose replay changed"));}
+            let prompt=self.read_file(Path::new(a.required("prompt-file")?))?;
+            if job["native_request_digest"]!=self.product_retry_request_digest(a,&prompt)?{return Err(Error::new("native evidence replay changed"));}
+        }
         if (a.value("scheduler-input-sha256").is_some() || a.value("scheduler-prompt-sha256").is_some()
                 || job.get("prepared_input").is_some() || job.get("prepared_job_prompt_sha256").is_some())
             && (job["prepared_input"]["domain"]!="todo-prepared-input-v1"
@@ -891,6 +904,11 @@ impl Context {
         if retry_key.is_some() && s(&job, "sandbox") == "workspace-write" {
             // The saved source scope, including a restricted writer, is exact.
             policy.sandbox = "workspace-write";
+        }
+        if let Some(purpose)=a.value("native-evidence-purpose") {
+            crate::native_export::validate_request_purpose(purpose)?;
+            job["native_evidence_purpose"]=json!(purpose);
+            job["native_request_digest"]=json!(self.product_retry_request_digest(a,&bytes)?);
         }
         job["model_explicit"] = json!(a.model_explicit);
         job["requested_model"] = job["model"].clone();

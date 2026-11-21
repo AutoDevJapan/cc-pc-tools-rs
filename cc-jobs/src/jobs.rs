@@ -178,7 +178,59 @@ mod progress_persistence_tests {
         }
     }
 }
+fn native_terminal_attempt_current(proposed:&Value,current:&Value)->bool {
+    proposed["native_evidence_purpose"]=="p33-skill-business-v11"&&
+    current["native_evidence_purpose"]=="p33-skill-business-v11"&&
+    !s(proposed,"started_at").is_empty()&&
+    ["id","started_at","pid","pid_created","codex_pid","codex_pid_created"]
+        .iter().all(|key|proposed[*key]==current[*key])
+}
 impl Context {
+    /// Native terminal status is published once, after the same notification
+    /// owner is joined and its collection record is saved. Collection never
+    /// holds state.lock or the global gate needed by notification consumers.
+    pub(crate) fn publish_native_terminal_after_notification(
+        &self, proposed:&Value, notifier:&mut Option<crate::native_export::ProgressOwner>,
+    )->Result<Option<Value>> {
+        let jid=s(proposed,"id");
+        let (may_publish,before)={
+            let _state=self.job_lock(jid,"state.lock")?;
+            let mut current=self.load(jid)?;
+            let same=native_terminal_attempt_current(proposed,&current);
+            if same&&LIVE.contains(&s(&current,"status"))&&current["cancel_requested"]!=true {
+                current["native_notification_pending"]=json!(true);
+                self.save(&current)?;
+                (true,current)
+            }else{(false,current)}
+        };
+        let collected=if let Some(owner)=notifier.as_mut() {
+            owner.collect()
+        }else{false};
+        let _state=self.job_lock(jid,"state.lock")?;
+        let current=self.load(jid)?;
+        if !may_publish||!native_terminal_attempt_current(proposed,&current)||
+            ["thread_id","resume_session"].iter().any(|key|current[*key]!=before[*key]) {return Ok(None); }
+        let mut final_job=if current["cancel_requested"]==true||!LIVE.contains(&s(&current,"status")) {
+            current.clone()
+        }else{proposed.clone()};
+        // Preserve only the current generation's independently published raw
+        // export registration and delayed collection facts.
+        for key in ["native_export","native_export_pending","native_retention_drained"] {
+            if let Some(value)=current.get(key) {final_job[key]=value.clone();}
+        }
+        final_job["native_notification_pending"]=json!(false);
+        final_job["native_notification_failed"]=json!(!collected);
+        if let Some(owner)=notifier.as_ref() {
+            final_job["native_notification_collection"]=owner.collection_facts();
+        }
+        if !collected&&final_job["status"]=="succeeded" {
+            final_job["status"]=json!("failed");
+            final_job["activity"]=json!("notification worker collection failed");
+            final_job["last_error"]=json!("native notification worker collection failed");
+        }
+        self.save(&final_job)?;
+        Ok(Some(final_job))
+    }
     /// Load saved owner instructions and enforce the current site restriction,
     /// including old saved jobs and both kinds of continuation. Keep the
     /// original input immutable; appending this rule does not elevate scope.
@@ -1090,34 +1142,37 @@ impl Context {
         Ok(())
     }
     fn supervise_owned(&self, jid: &str) -> Result<()> {
-        let pid = self.rt.pid();
-        let (process_tree, process_tree_root_created): (
-            Option<crate::pause::ProcessTreeScope>,
-            Option<u64>,
-        ) = if self.rt.supports_process_tree_job() {
-            let created = self
-                .rt
-                .proc_created_checked(pid)?
-                .ok_or_else(|| Error::new("process tree root identity is unavailable"))?;
-            match crate::pause::contain_current_process(pid, created) {
-                Ok(scope) => (Some(scope), Some(created)),
-                Err(error) => {
-                    self.rt.diagnostic(&format!(
-                        "Windows process tree containment unavailable; using retained-handle cancellation: {}",
-                        redact_local_log_secrets(&error.to_string(), &self.rt.env())
-                    ));
-                    (None, Some(created))
-                }
-            }
-        } else {
-            (None, None)
-        };
+        let pid=self.rt.pid();
+        let process_tree:Option<crate::pause::ProcessTreeScope>;
         {
-            let _state = self.job_lock(jid, "state.lock")?;
-            let mut job = self.load(jid)?;
-            if s(&job, "status") != "queued" || job["cancel_requested"] == true {
-                return Ok(());
-            }
+            let _state=self.job_lock(jid,"state.lock")?;
+            let mut job=self.load(jid)?;
+            if s(&job,"status")!="queued"||job["cancel_requested"]==true{return Ok(());}
+            let native_evidence=job["native_evidence_purpose"]=="p33-skill-business-v11";
+            let (scope, process_tree_root_created): (
+                Option<crate::pause::ProcessTreeScope>,
+                Option<u64>,
+            ) = if self.rt.supports_process_tree_job() {
+                let created = self
+                    .rt
+                    .proc_created_checked(pid)?
+                    .ok_or_else(|| Error::new("process tree root identity is unavailable"))?;
+                match crate::pause::contain_for_evidence(pid, created,native_evidence) {
+                    Ok(scope) => (Some(scope), Some(created)),
+                    Err(error) => {
+                        if native_evidence{return Err(error.into());}
+                        self.rt.diagnostic(&format!(
+                            "Windows process tree containment unavailable; using retained-handle cancellation: {}",
+                            redact_local_log_secrets(&error.to_string(), &self.rt.env())
+                        ));
+                        (None, Some(created))
+                    }
+                }
+            } else {
+                if native_evidence{return Err(Error::new("native evidence Job ownership unavailable"));}
+                (None, None)
+            };
+            process_tree=scope;
             if process_tree.is_some() {
                 job["process_tree_version"] = json!(1);
             } else if let Some(fields) = job.as_object_mut() {
@@ -1244,9 +1299,11 @@ impl Context {
                     continue;
                 }
             };
-            if !self.supervise_attempt(jid, state, &cfg)? {
-                return Ok(());
-            }
+            let result=self.supervise_attempt(jid,state,&cfg,process_tree.as_ref());
+            // The owner process is the retention boundary. Do not return from
+            // this process while an exact uncollected child/pipe is still owned.
+            while crate::native_export::has_retained_attempt(jid) {crate::native_export::drain_retained_attempts(self,jid);self.rt.sleep(0.2);}
+            if !result?{return Ok(());}
         }
     }
     /// Apply a masked event. A completed agent message also replaces the
@@ -1268,10 +1325,16 @@ impl Context {
         jid: &str,
         state: FileLock,
         cfg: &crate::queue::QueueConfig,
+        process_tree:Option<&crate::pause::ProcessTreeScope>,
     ) -> Result<bool> {
+        #[cfg(not(windows))] let _=process_tree;
         let dir = self.job_dir(jid);
         let mut job = self.load(jid)?;
         let t0 = self.rt.mono();
+        let native_enabled=job["native_evidence_purpose"]=="p33-skill-business-v11";
+        let mut native_capture:Option<crate::native_export::Capture>=None;
+        let mut native_readers:Vec<thread::JoinHandle<()>>=Vec::new();
+        let mut native_input:Option<thread::JoinHandle<std::io::Result<()>>>=None;
         let mut proc: Option<Box<dyn Running>> = None;
         let mut notifier = None;
         let mut exit = None;
@@ -1318,7 +1381,15 @@ impl Context {
             } else {
                 "last_message.md"
             });
-            proc = Some(self.rt.spawn(&self.execution_spawn(&job)?)?);
+            if native_enabled {
+                let n = TaskProgress::new(self.ao_executable(), self.jobs.clone(), self.rt.clone());
+                let mut owner=crate::native_export::ProgressOwner::new(n,true);
+                owner.bind_job(&dir,&job);owner.start(&job);
+                notifier=Some(owner);
+            }
+            let spawn=self.execution_spawn(&job)?;
+            let native_prompt=if native_enabled{Some(self.read_file(&spawn.prompt)?)}else{None};
+            proc = Some(if native_enabled{self.rt.spawn_native_capture(&spawn)?}else{self.rt.spawn(&spawn)?});
             let p = proc.as_mut().unwrap();
             job["codex_pid"] = json!(p.pid());
             let created = self.rt.proc_created_checked(p.pid())?;
@@ -1335,33 +1406,53 @@ impl Context {
             progress = Some(ProgressPersistence::new(&job));
             let progress = progress.as_mut().unwrap();
             drop(lock);
-            let mut n = TaskProgress::new(self.ao_executable(), self.jobs.clone(), self.rt.clone());
-            n.start(&job);
-            notifier = Some(n);
+            #[cfg(windows)]
+            if native_enabled {
+                use std::os::windows::io::AsHandle;
+                let child=p.native_child_mut().ok_or_else(||Error::new("normal native child handle unavailable"))?;
+                let scope=process_tree.ok_or_else(||Error::new("normal owned Job unavailable"))?;
+                let (capture,input)=self.begin_native_capture(jid,native_prompt.as_ref().unwrap(),&spawn.argv,child.as_handle(),Some(scope.borrowed_job()))?;
+                native_capture=Some(capture);
+                let writer=native_capture.as_ref().unwrap().owned_input_writer(input,child)?;
+                native_input=Some(crate::native_export::spawn_owned_thread(crate::native_export::NativeThreadRole::CaptureInput,move||writer.write())?);
+            }
+            #[cfg(not(windows))]
+            if native_enabled{return Err(Error::new("native capture unavailable on this platform"));}
+            if !native_enabled {
+                let mut n = TaskProgress::new(self.ao_executable(), self.jobs.clone(), self.rt.clone());
+                n.start(&job);
+                notifier = Some(crate::native_export::ProgressOwner::new(n,false));
+            }
             let (qtx, qrx) = mpsc::channel();
             let (etx, erx) = mpsc::channel();
-            let mut readers = Vec::new();
+            let readers=&mut native_readers;
             if let Some(stdout) = p.stdout() {
+                let stdout:Box<dyn Read+Send>=if let Some(capture)=&native_capture{Box::new(capture.stdout(stdout)?)}else{stdout};
                 let path = dir.join("events.jsonl");
                 let rt = self.rt.clone();
                 let etx = etx.clone();
-                readers.push(thread::spawn(move || {
+                readers.push(crate::native_export::spawn_owned_thread(crate::native_export::NativeThreadRole::CaptureStdout,move || {
                     if let Err(e) = pump(stdout, &path, rt.as_ref(), |ev| {
                         let _ = qtx.send(ev);
                     }) {
                         let _ = etx.send(e);
                     }
-                }));
+                })?);
             }
             if let Some(stderr) = p.stderr() {
+                let stderr:Box<dyn Read+Send>=if let Some(capture)=&native_capture{Box::new(capture.stderr(stderr)?)}else{stderr};
                 let path = dir.join("stderr.log");
                 let rt = self.rt.clone();
                 let etx = etx.clone();
-                readers.push(thread::spawn(move || {
+                readers.push(crate::native_export::spawn_owned_thread(crate::native_export::NativeThreadRole::CaptureStderr,move || {
                     if let Err(e) = pump_stderr(stderr, &path, rt.as_ref()) {
                         let _ = etx.send(e);
                     }
-                }));
+                })?);
+            }
+            #[cfg(windows)]
+            if let Some(capture)=&native_capture {
+                capture.resume_owned_child(p.native_child_mut().ok_or_else(||Error::new("normal native child unavailable"))?)?;
             }
             let mut sess = Session::default();
             let mut next_poll = 0.;
@@ -1370,6 +1461,17 @@ impl Context {
             let mut pretool = crate::pretool_failure::PretoolFailure::default();
             let mut next_protocol_check = 0.;
             loop {
+                if native_input.as_ref().is_some_and(|handle|handle.is_finished()) {
+                    let handle=native_input.take().unwrap();
+                    if !matches!(handle.join(),Ok(Ok(()))){return Err(Error::new("native stdin writer failed"));}
+                }
+                if native_enabled {
+                    let current=self.load(jid)?;
+                    if current["started_at"]!=job["started_at"]||current["cancel_requested"]==true||current["status"]=="cancelled" {
+                        return Err(Error::new("native evidence cancelled or generation changed"));
+                    }
+                }
+                if native_enabled&&self.rt.mono()-t0>=crate::native_export::NATIVE_ATTEMPT_BUDGET_SECS {return Err(Error::new("native evidence whole-attempt deadline"));}
                 let ev = match qrx.recv_timeout(std::time::Duration::from_millis(500)) {
                     Ok(ev) => Some(ev),
                     Err(mpsc::RecvTimeoutError::Timeout) => None,
@@ -1387,7 +1489,7 @@ impl Context {
                     s(ev, "type") == "item.completed"
                         && TOOL_KINDS.contains(&s(&ev["item"], "type"))
                 });
-                if self.rt.mono() >= next_poll || completed_tool {
+                if !native_enabled && (self.rt.mono() >= next_poll || completed_tool) {
                     next_poll = self.rt.mono() + SESSION_POLL_S;
                     match self.poll_session(&mut job, &mut sess) {
                         Ok(b) => changed |= b,
@@ -1401,7 +1503,7 @@ impl Context {
                     pretool.event(&ev, self.rt.mono());
                     job["last_event_at"] = ev["_ts"].clone();
                     self.apply_recorded(&mut job, &ev, &output);
-                    if s(&ev, "type") == "item.completed"
+                    if !native_enabled&&s(&ev, "type") == "item.completed"
                         && TOOL_KINDS.contains(&s(&ev["item"], "type"))
                         && (self.context_limit_reached(&job)
                             || parse_iso(s(&job, "started_at"))
@@ -1461,7 +1563,7 @@ impl Context {
                         Err(error) => self.yield_diagnostic(&error),
                     }
                 }
-                if !had_event
+                if !native_enabled&&!had_event
                     && self.rt.mono() >= next_yield_check
                     && (self.context_limit_reached(&job)
                         || parse_iso(s(&job, "started_at"))
@@ -1547,7 +1649,7 @@ impl Context {
                 "supervisor error: {}",
                 redact_local_log_secrets(&e.message, &self.rt.env())
             ));
-            if let Some(p) = proc.as_mut()
+            if !native_enabled&&let Some(p) = proc.as_mut()
                 && p.poll()?.is_none()
             {
                 if let Some(created) = job["codex_pid_created"].as_u64() {
@@ -1562,6 +1664,59 @@ impl Context {
                 }
                 cleanup_failed = p.poll()?.is_none();
             }
+        }
+        if native_enabled {
+            #[cfg(windows)]
+            {
+                // Keep the exact normal Job and Child alive through all pump
+                // joins. The producer records unknown if collection cannot finish.
+                if native_capture.is_none()&&let Some(process)=proc.as_mut() {
+                        let deadline=std::time::Instant::now()+std::time::Duration::from_secs(5);
+                        if !matches!(process.poll(),Ok(Some(_))){let _=process.kill();}
+                        while !matches!(process.poll(),Ok(Some(_)))&&std::time::Instant::now()<deadline{self.rt.sleep(0.02);}
+                        if !matches!(process.poll(),Ok(Some(_))){cleanup_failed=true;}
+                }
+                if let (Some(capture),Some(process))=(native_capture.as_mut(),proc.as_mut()) {
+                    let deadline=std::time::Instant::now()+std::time::Duration::from_secs(5);
+                    if capture.reclaim_owned_children(deadline).is_err(){cleanup_failed=true;}
+                    while !native_readers.iter().all(thread::JoinHandle::is_finished)||native_input.as_ref().is_some_and(|h|!h.is_finished()) {
+                        if capture.reclaim_owned_children(deadline).is_err(){cleanup_failed=true;}
+                        if std::time::Instant::now()>=deadline {cleanup_failed=true;break;}
+                        self.rt.sleep(0.02);
+                    }
+                    if let Some(child)=process.native_child_mut() {
+                        if !matches!(capture.observe_child_wait(child),Ok(Some(_))){cleanup_failed=true;}
+                    }else{cleanup_failed=true;}
+                }
+            }
+            let uncollected=native_readers.iter().any(|h|!h.is_finished())||native_input.as_ref().is_some_and(|h|!h.is_finished())||
+                proc.as_mut().is_some_and(|p|!matches!(p.poll(),Ok(Some(_))))||{
+                    #[cfg(windows)]{native_capture.as_ref().is_some_and(|capture|!capture.owned_children_collected())}
+                    #[cfg(not(windows))]{false}
+                };
+            if uncollected {
+                cleanup_failed=true;
+                if let Some(process)=proc.take()&&crate::native_export::retain_native_attempt(self,&job,process,native_capture.take(),std::mem::take(&mut native_readers),native_input.take()).is_err(){job["native_retention_receipt_failed"]=json!(true);}
+            }
+            for reader in native_readers.drain(..) {
+                if reader.is_finished(){if reader.join().is_err(){cleanup_failed=true;}}
+                else {cleanup_failed=true;crate::native_export::retain_reader(reader);}
+            }
+            if let Some(input)=native_input.take() {
+                if input.is_finished(){if !matches!(input.join(),Ok(Ok(()))){cleanup_failed=true;}}
+                else {cleanup_failed=true;crate::native_export::retain_input(input);}
+            }
+            #[cfg(windows)]
+            if let Some(process)=proc.take()&&process.close_owned_process().is_err(){cleanup_failed=true;job["native_primary_handle_close_failed"]=json!(true);}
+            if let Some(capture)=native_capture.take() {
+                match capture.finish().and_then(|finished|self.publish_native_export(finished).map_err(|error|std::io::Error::other(error.message))) {
+                    Ok(())=>(),Err(error)=>{cleanup_failed=true;job["native_export_error"]=json!(redact_local_log_secrets(&error.to_string(),&self.rt.env()));}
+                }
+            }
+            if cleanup_failed {job["native_collection_failed"]=json!(true);}
+            // Publishing has its own locked CAS. Keep that exact registration in
+            // the later terminal snapshot; do not overwrite it with the old copy.
+            if let Ok(current)=self.load(jid)&&current["started_at"]==job["started_at"] {job["native_export"]=current["native_export"].clone();job["native_export_pending"]=current["native_export_pending"].clone();}
         }
         // A queued job cancelled before the second load must never be rewritten by this supervisor.
         if !attempt_failed && proc.is_none() && s(&job, "status") != "running" {
@@ -1585,7 +1740,7 @@ impl Context {
         {
             self.yield_diagnostic(&error);
         }
-        if s(&job, "last_failure_kind") == "capacity" && !cleanup_failed && !attempt_failed
+        if !native_enabled&&s(&job, "last_failure_kind") == "capacity" && !cleanup_failed && !attempt_failed
             && (!protocol_attempted || protocol_reclaimed) {
             job["capacity_inventory"] = self.capacity_inventory(&job);
         }
@@ -1657,7 +1812,7 @@ impl Context {
         };
         // Capacity switches have their own bound. A combined capacity/429
         // message must not escape that bound through the same-model retry.
-        let retry = !cleanup_failed
+        let retry = !native_enabled&&!cleanup_failed
             && !attempt_failed
             && (!protocol_attempted || protocol_reclaimed)
             && if s(&job, "last_failure_kind") == "capacity" {
@@ -1680,7 +1835,7 @@ impl Context {
                 self.retry_429(&mut job, cfg)
             };
         let mut yielded = false;
-        if gate.is_some()
+        if !native_enabled&&gate.is_some()
             && !cleanup_failed
             && !attempt_failed
             && !retry
@@ -1715,22 +1870,32 @@ impl Context {
                 }
             }
         }
-        if let Err(error) = self.save(&job) {
-            // Do not notify success or restart a queued attempt before this
-            // transition is durable. Preserve events/output and the failed
-            // snapshot for supervisor recovery, and report the actual failure.
-            self.rt.diagnostic(&format!(
-                "終了状態を保存できません (job={}, status={}); 記録を保持します: {}",
-                s(&job, "id"), s(&job, "status"),
-                redact_local_log_secrets(&error.message, &self.rt.env())
-            ));
-            return Err(error);
+        if native_enabled {
+            drop(todo_guard);
+            drop(state);
+            drop(gate);
+            #[cfg(windows)]
+            drop(chrome_proxy);
+            let Some(final_job)=self.publish_native_terminal_after_notification(&job,&mut notifier)? else {return Ok(false);};
+            job=final_job;
+        }else{
+            if let Err(error) = self.save(&job) {
+                // Do not notify success or restart a queued attempt before this
+                // transition is durable. Preserve events/output and the failed
+                // snapshot for supervisor recovery, and report the actual failure.
+                self.rt.diagnostic(&format!(
+                    "終了状態を保存できません (job={}, status={}); 記録を保持します: {}",
+                    s(&job, "id"), s(&job, "status"),
+                    redact_local_log_secrets(&error.message, &self.rt.env())
+                ));
+                return Err(error);
+            }
+            drop(todo_guard);
+            drop(state);
+            drop(gate);
+            #[cfg(windows)]
+            drop(chrome_proxy);
         }
-        drop(todo_guard);
-        drop(state);
-        drop(gate);
-        #[cfg(windows)]
-        drop(chrome_proxy);
         self.close_chrome_tabs(jid);
         if retry || yielded {
             if let Some(n) = &mut notifier {
@@ -1750,9 +1915,17 @@ impl Context {
                 .stderr(std::process::Stdio::null())
                 .spawn();
         }
-        if let Some(n) = &mut notifier {
-            n.update(&job, true);
-            n.close();
+        if let Some(n)=&mut notifier {
+            if native_enabled {
+                // Delivery still belongs to the same start-gated lifecycle;
+                // join alone never establishes that start was accepted.
+                if n.deliver_published_terminal(self,&job).is_err() {
+                    self.rt.diagnostic("native notification delivery receipt unavailable");
+                }
+            }else{
+                n.update(&job,true);
+                n.close();
+            }
         }
         Ok(false)
     }

@@ -73,6 +73,7 @@ type watchdogBuildLease interface {
 type watchdogBuildOpener func(context.Context) (watchdogBuildLease, error)
 
 type watchdogBuildProduct struct {
+	claimMu sync.Mutex
 	Source watchdogSourceSnapshot
 	Artifact watchdogBuildArtifact
 	Identity watchdogFileIdentity
@@ -80,12 +81,20 @@ type watchdogBuildProduct struct {
 	lease watchdogBuildLease
 	closed bool
 	closeErr error
+	artifactPath string
+	claimed bool
+	seal *watchdogBuildSeal
 }
+
+// A one-shot in-memory producer binding, not a deserializable permit.
+type watchdogBuildSeal struct{ owner *watchdogBuildProduct }
 
 func (p *watchdogBuildProduct) Close() error {
 	if p == nil {
 		return nil
 	}
+	p.claimMu.Lock()
+	defer p.claimMu.Unlock()
 	if p.closed {
 		return p.closeErr
 	}
@@ -273,8 +282,9 @@ func produceWatchdogBuild(ctx context.Context, open watchdogBuildOpener, artifac
 	digest := sha256.Sum256(output.CargoJSON)
 	product = &watchdogBuildProduct{
 		Source: before, Artifact: output.Artifact, Identity: identity,
-		CargoJSONSHA256: hex.EncodeToString(digest[:]), lease: lease,
+		CargoJSONSHA256: hex.EncodeToString(digest[:]), lease: lease, artifactPath:artifactPath,
 	}
+	product.seal=&watchdogBuildSeal{owner:product}
 	committed = true
 	return product, nil
 }

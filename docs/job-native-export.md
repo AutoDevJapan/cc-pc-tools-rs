@@ -143,7 +143,7 @@ shared connections are intentionally not represented by successful stubs:
 - platform spawn connects Capture::owned_input_writer to that same Child and
   its taken stdin, and exposes the retained normal Job handle;
 - jobs.rs tees both streams before legacy redaction, waits/drains with its
-  existing deadline, calls finish and publishes FinishedExport under the same
+  finite native-attempt budget, calls finish and publishes FinishedExport under the same
   attempt CAS only after durable receipts;
 - the outer normal consumer records actual Child wait/reap and controller
   termination, and supplies the existing qualified readonly API transport;
@@ -274,3 +274,50 @@ termination each record attempted before calling the API, plus accepted and
 failed facts. Converged wait/EOF/close facts do not erase an earlier stop attempt
 or turn forced/failed cleanup into normal operation success. The compatibility
 terminate_attempted field projects either actual attempt, including API failure.
+
+
+## Notification terminal states and raw stream completion
+
+TaskProgress owns its actual notification worker JoinHandle. Pending means that
+worker is still live or has not yet been joined. Done requires both the normal
+completion message and a successful join; Failed includes a disconnected
+completion sender, a panicked worker, or thread creation failure. A disconnected
+sender is never treated as success, and its terminated worker is not waited on
+as if future completion messages could arrive. Closure is requested once;
+subsequent calls observe and join the same worker without starting a replacement.
+
+Native progress collection keeps failed notification status separate from a
+completed process/pipe collection. Its fixed receipt records worker start, join,
+completion-message and channel-failure facts. A failed worker cannot turn the
+business run into success. Ordinary nonnative close still returns false at its
+existing shutdown cap while the same live worker remains pending, and can return
+true after normal completion and join. A failed notification delivery remains
+existing notification data, distinct from worker collection.
+
+The readonly shutdown signal stops stdin work and reply forwarding only. It does
+not end raw stdout acquisition. Both connection streams use the original same-
+handle byte tee, bounded by 32 MiB per stream, and require real EOF, a matching
+size/hash/file-identity seal and Close outcomes. Buffered trailing lines are
+preserved after the last requested reply, after a full forwarding queue, and
+after the reply consumer is dropped. Read failure, overflow, early drop or EOF
+not observed remain failed/unknown. Thread exit and Job emptiness alone cannot
+make raw_streams_complete true.
+
+## Native attempt budget
+
+NATIVE_ATTEMPT_BUDGET_SECS is 600 seconds for the native-evidence purpose only.
+This author-selected finite evidence-capture budget is not an owner-requested
+business deadline. It bounds a single representative acceptance run so a stuck
+host cannot consume its supervisor indefinitely before cleanup starts. Input,
+policy and normal nonnative job timeouts are unchanged. Exceeding this budget
+returns failure and starts same-owner collection; uncollected ownership may
+continue after the business deadline. A task needing a longer representative
+capture requires a reviewed budget change; this source does not silently retry,
+extend the deadline or claim completion. Stream-budget overflow also fails the
+capture and may stop that native evidence run rather than silently truncating it.
+
+The origin directory is a single CreateNew attempt: a failed capture leaves its
+original evidence in place and another request for that directory is refused.
+The capture Job can include normally inherited supervisor helper processes;
+active-count and same-owner cleanup observations therefore remain conservative
+and are not proof about unrelated or external processes.

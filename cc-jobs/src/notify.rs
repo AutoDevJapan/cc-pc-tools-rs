@@ -4,7 +4,7 @@ use std::{
     path::{Path, PathBuf},
     sync::{Arc, Mutex, mpsc},
     thread,
-    time::Duration,
+    time::{Duration,Instant},
 };
 pub const NOTIFY_INTERVAL_S: f64 = 15.;
 pub const NOTIFY_START_ATTEMPTS: usize = 4;
@@ -208,6 +208,8 @@ pub struct Notice {
     pub job: Value,
     pub deadline: f64,
 }
+#[derive(Clone,Copy,Debug,PartialEq,Eq)]
+pub enum ProgressCompletion { Pending, Done, Failed }
 pub struct TaskProgress {
     pub executable: Option<String>,
     pub last_edit: f64,
@@ -218,6 +220,10 @@ pub struct TaskProgress {
     sender: Option<mpsc::Sender<Notice>>,
     pending: Arc<Mutex<Option<(Value, f64)>>>,
     done: Option<mpsc::Receiver<()>>,
+    worker:Option<thread::JoinHandle<()>>,
+    completion:ProgressCompletion,
+    done_received:bool,channel_failed:bool,close_requested:bool,
+    worker_start_attempted:bool,worker_started:bool,worker_joined:bool,
 }
 impl TaskProgress {
     pub fn new(exe: Option<String>, jobs: PathBuf, rt: SharedRuntime) -> Self {
@@ -231,7 +237,9 @@ impl TaskProgress {
             jobs,
             sender: None,
             pending: Arc::new(Mutex::new(None)),
-            done: None,
+            done: None,worker:None,completion:ProgressCompletion::Done,
+            done_received:false,channel_failed:false,close_requested:false,
+            worker_start_attempted:false,worker_started:false,worker_joined:false,
         }
     }
     pub fn start(&mut self, job: &Value) {
@@ -240,17 +248,16 @@ impl TaskProgress {
         };
         let deadline = self.rt.mono() + NOTIFY_DEADLINE_S;
         let (tx, rx) = mpsc::channel::<Notice>();
-        let (done_tx, done_rx) = mpsc::channel();
         let rt = self.rt.clone();
         let jobs = self.jobs.clone();
         let pending = self.pending.clone();
         let backoff = self.backoff;
-        thread::spawn(move || {
-            work_notices(&exe, &jobs, rt.as_ref(), &rx, &pending, backoff);
-            let _ = done_tx.send(());
+        let started=self.install_worker(move |done_tx| {
+            work_notices(&exe,&jobs,rt.as_ref(),&rx,&pending,backoff);
+            let _=done_tx.send(());
         });
-        self.sender = Some(tx);
-        self.done = Some(done_rx);
+        if !started{return;}
+        self.sender=Some(tx);
         let _ = self.sender.as_ref().unwrap().send(Notice {
             kind: "start".into(),
             job: job.clone(),
@@ -284,22 +291,52 @@ impl TaskProgress {
             }
         }
     }
-    pub fn close(&mut self) -> bool {
-        // Ending an attempt may only pause a job; disconnect without a finish
-        // notice so its notification worker also exits on 429 requeue.
-        self.sender.take();
-        if let Some(rx) = &self.done
-            && rx
-                .recv_timeout(Duration::from_secs_f64(self.shutdown_cap))
-                .is_err()
-        {
-            self.rt
-                .diagnostic("task notification exceeded shutdown cap");
-            return false;
+    fn install_worker(&mut self,work:impl FnOnce(mpsc::Sender<()>)+Send+'static)->bool {
+        if self.worker_start_attempted {return false;}
+        let (done_tx,done_rx)=mpsc::channel();
+        self.worker_start_attempted=true;self.close_requested=false;self.done=Some(done_rx);self.completion=ProgressCompletion::Pending;
+        match thread::Builder::new().name("task-progress".into()).spawn(move || work(done_tx)) {
+            Ok(worker)=>{self.worker=Some(worker);self.worker_started=true;true},
+            Err(_)=>{self.done=None;self.channel_failed=true;self.completion=ProgressCompletion::Failed;false}
         }
-        self.done = None;
-        true
     }
+    #[cfg(test)]
+    pub(crate) fn completion_test_worker(&mut self,work:impl FnOnce(mpsc::Sender<()>)+Send+'static) {assert!(self.install_worker(work));}
+    pub fn completion(&self)->ProgressCompletion {self.completion}
+    pub fn collection_facts(&self)->Value {
+        json!({"state":match self.completion {ProgressCompletion::Pending=>"pending",ProgressCompletion::Done=>"done",ProgressCompletion::Failed=>"failed"},
+            "worker_start_attempted":self.worker_start_attempted,"worker_started":self.worker_started,"worker_joined":self.worker_joined,
+            "done_received":self.done_received,"channel_failed":self.channel_failed,"close_requested":self.close_requested})
+    }
+    pub fn close_status(&mut self)->ProgressCompletion {
+        if !self.close_requested {self.close_requested=true;self.sender.take();}
+        if self.worker.is_none() {return self.completion;}
+        let cap=if self.shutdown_cap.is_finite()&&self.shutdown_cap>=0. {self.shutdown_cap.min(NOTIFY_SHUTDOWN_CAP_S)}else{0.};
+        let deadline=Instant::now()+Duration::from_secs_f64(cap);
+        loop {
+            if !self.done_received&&!self.channel_failed {
+                if let Some(rx)=&self.done {
+                    match rx.recv_timeout(deadline.saturating_duration_since(Instant::now())) {
+                        Ok(())=>self.done_received=true,
+                        Err(mpsc::RecvTimeoutError::Timeout)=>(),
+                        Err(mpsc::RecvTimeoutError::Disconnected)=>self.channel_failed=true,
+                    }
+                }
+            }
+            if self.worker.as_ref().is_some_and(thread::JoinHandle::is_finished) {
+                let joined=self.worker.take().unwrap().join();
+                self.worker_joined=true;self.done=None;
+                self.completion=if joined.is_ok()&&self.done_received&&!self.channel_failed {ProgressCompletion::Done}else{ProgressCompletion::Failed};
+                return self.completion;
+            }
+            if Instant::now()>=deadline {
+                self.rt.diagnostic("task notification exceeded shutdown cap");
+                return ProgressCompletion::Pending;
+            }
+            thread::yield_now();
+        }
+    }
+    pub fn close(&mut self)->bool {self.close_status()==ProgressCompletion::Done}
     pub fn notify_with_retry(&self, kind: &str, job: &Value, deadline: f64) -> bool {
         let Some(exe) = &self.executable else {
             return false;

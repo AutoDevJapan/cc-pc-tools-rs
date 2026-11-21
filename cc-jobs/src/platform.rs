@@ -1101,7 +1101,6 @@ fn lock_byte(_f: &File, _unlock: bool) -> io::Result<()> {
 }
 
 pub type SharedRuntime = Arc<dyn Runtime>;
-/// A TextIO-style stdout/stderr writer. Python translates LF to CRLF on Windows.
 
 thread_local! {static NATIVE_RAW_OUTPUT:std::cell::Cell<bool>=const {std::cell::Cell::new(false)};}
 pub(crate) struct NativeRawOutput(bool);
@@ -1110,6 +1109,7 @@ pub(crate) fn native_raw_output()->NativeRawOutput {
 }
 impl Drop for NativeRawOutput {fn drop(&mut self){NATIVE_RAW_OUTPUT.with(|value|value.set(self.0));}}
 
+/// A TextIO-style stdout/stderr writer. Python translates LF to CRLF on Windows.
 pub struct TextWriter<W: Write>(pub W);
 impl<W: Write> Write for TextWriter<W> {
     fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {

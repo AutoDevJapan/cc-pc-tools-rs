@@ -632,7 +632,7 @@ fn native_evidence_keeps_normal_model_policy_and_user_capabilities() {
 }
 #[cfg(windows)]
 #[test]
-fn public_exact_selector_rejects_unregistered_job_without_starting_host() {
+fn public_exact_selector_rejects_invalid_selectors_without_starting_host() {
     let dir=tempfile::tempdir().unwrap();
     let rt:crate::SharedRuntime=Arc::new(crate::System::default());
     let context=Context{root:dir.path().into(),jobs:dir.path().join("jobs"),home:dir.path().into(),codex_home:dir.path().join("codex"),
@@ -721,10 +721,8 @@ fn actual_saved_prompt_fact_is_required_for_persisted_input() {
     assert_eq!(fs::read(dir.path().join("fact-child.txt")).unwrap(),bytes);
 }
 
-#[test]
-fn normal_job_process_inventory_uses_windows_pointer_layout() {
-    for pointer_width in [4usize,8] {let offset=8/pointer_width;assert_eq!(offset*pointer_width,8);assert!(offset>=1);}
-}
+// Production JobObjectBasicProcessIdList parsing is exercised below by
+// actual_capture_job_reclaim_retention_and_membership_controls.
 #[cfg(windows)]
 #[test]
 fn real_owned_child_primary_handle_closes_after_observed_wait() {
@@ -915,7 +913,11 @@ fn each_fallible_setup_stage_keeps_the_suspended_child_until_cleanup() {
         if fail.is_none(){assert_eq!(fs::read(&output).unwrap(),raw);}
         // Same factory/owner objects as jobs.rs. This isolated fixture cannot
         // assert the actual normal supervisor's queue or H1 admission.
-        let finished=capture.finish().unwrap();assert!(finished.receipt.bytes>0);
+        let finished=capture.finish().unwrap();
+        let receipt:Value=serde_json::from_slice(&fs::read(dir.path().join("export.private.json")).unwrap()).unwrap();
+        assert_eq!(receipt["original_complete"],fail.is_none());
+        if fail.is_none(){assert_eq!(receipt["input"]["writer_closed"],"confirmed");assert_eq!(receipt["stdout"]["eof"],"confirmed");assert_eq!(receipt["stderr"]["eof"],"confirmed");assert_eq!(receipt["collection"]["std_child_wait"]["reaped"],"confirmed");}
+        assert!(finished.receipt.bytes>0);
     }
 }
 
@@ -954,3 +956,240 @@ fn stop_attempt_fact_exists_before_the_native_callback_returns() {
     let mut state=OriginFacts::default();state.child_wait=true;state.exit_code=Some(0);state.job_query(Ok(0));
     state.job_terminate=fact;assert!(state.collected(true));assert!(!state.unforced_success());
 }
+
+#[cfg(windows)]
+#[test]
+fn actual_origin_reader_forward_stop_keeps_all_raw_and_eof() {
+    struct Slices{input:Cursor<Vec<u8>>}
+    impl Read for Slices {fn read(&mut self,b:&mut [u8])->io::Result<usize>{let size=b.len().min(7);self.input.read(&mut b[..size])}}
+    let raw=b"{\"id\":2,\"result\":{}}\nnotice-A\nnotice-B\nlast-no-LF";
+    for dropped in [false,true] {let dir=tempfile::tempdir().unwrap();let path=dir.path().join("connection.stdout.native.jsonl");
+        let state=Arc::new(Mutex::new(StreamState::default()));let stop=Arc::new(std::sync::atomic::AtomicBool::new(true));
+        let (tx,rx)=std::sync::mpsc::sync_channel(1);if dropped {drop(rx);}else{tx.send(Ok(vec![1])).unwrap();}
+        native::origin_read_lines(CloseOnce::new(Slices{input:Cursor::new(raw.to_vec())},|_|Ok(())),path.clone(),tx,stop,state.clone()).unwrap();
+        assert_eq!(fs::read(&path).unwrap(),raw);let actual=state.lock().unwrap();
+        assert_eq!(actual.eof,Observed::Confirmed);assert_eq!(actual.persisted,Observed::Confirmed);assert_eq!(actual.seal.as_ref().unwrap().sha256,native::sha256(raw).unwrap());
+    }
+}
+#[cfg(windows)]
+#[test]
+fn actual_origin_reader_full_queue_then_shutdown_does_not_cut_tail() {
+    let dir=tempfile::tempdir().unwrap();let path=dir.path().join("connection.stdout.native.jsonl");
+    let raw=b"{\"id\":2,\"result\":{}}\ntail-one\ntail-two\n".to_vec();let expected=raw.clone();
+    let state=Arc::new(Mutex::new(StreamState::default()));let checked=state.clone();
+    let stop=Arc::new(std::sync::atomic::AtomicBool::new(false));let later=stop.clone();let (tx,rx)=std::sync::mpsc::sync_channel(1);
+    let (full_tx,full_rx)=std::sync::mpsc::sync_channel(1);let destination=path.clone();
+    let worker=std::thread::Builder::new().spawn(move || {
+        native::ORIGIN_FORWARD_FULL_OBSERVER.with(|h|*h.borrow_mut()=Some(full_tx));
+        native::origin_read_lines(CloseOnce::new(Cursor::new(raw),|_|Ok(())),destination,tx,stop,state)
+    }).unwrap();
+    full_rx.recv_timeout(std::time::Duration::from_secs(3)).unwrap();
+    assert_eq!(rx.recv_timeout(std::time::Duration::from_secs(3)).unwrap().unwrap(),b"{\"id\":2,\"result\":{}}\n");
+    later.store(true,std::sync::atomic::Ordering::Release);drop(rx);
+    assert!(worker.join().unwrap().is_ok());assert_eq!(fs::read(path).unwrap(),expected);assert_eq!(checked.lock().unwrap().eof,Observed::Confirmed);
+}
+#[cfg(windows)]
+#[test]
+fn actual_origin_reader_fault_overflow_and_exact_budget_are_separate() {
+    struct FailingRead{step:bool}
+    impl Read for FailingRead {fn read(&mut self,b:&mut [u8])->io::Result<usize>{if self.step{return Err(io::Error::other("owned fixture read failure"));}self.step=true;b[..2].copy_from_slice(b"a\n");Ok(2)}}
+    for overflow in [false,true] {let dir=tempfile::tempdir().unwrap();let state=Arc::new(Mutex::new(StreamState::default()));let stop=Arc::new(std::sync::atomic::AtomicBool::new(true));let (tx,rx)=std::sync::mpsc::sync_channel(1);drop(rx);
+        let result=if overflow {native::origin_read_lines(CloseOnce::new(Cursor::new(vec![b'a';MAX_FRAME+1]),|_|Ok(())),dir.path().join("raw"),tx,stop,state.clone())}
+            else{native::origin_read_lines(CloseOnce::new(FailingRead{step:false},|_|Ok(())),dir.path().join("raw"),tx,stop,state.clone())};
+        assert!(result.is_err());assert_ne!(state.lock().unwrap().eof,Observed::Confirmed);assert_eq!(state.lock().unwrap().persisted,Observed::Failed);
+    }
+    let dir=tempfile::tempdir().unwrap();let path=dir.path().join("raw");let mut raw=vec![b'a';MAX_FRAME];raw[MAX_FRAME-1]=b'\n';
+    let state=Arc::new(Mutex::new(StreamState::default()));let (tx,rx)=std::sync::mpsc::sync_channel(1);drop(rx);
+    native::origin_read_lines(CloseOnce::new(Cursor::new(raw.clone()),|_|Ok(())),path.clone(),tx,Arc::new(std::sync::atomic::AtomicBool::new(true)),state.clone()).unwrap();
+    assert_eq!(fs::read(path).unwrap(),raw);assert_eq!(state.lock().unwrap().eof,Observed::Confirmed);assert_eq!(state.lock().unwrap().seal.as_ref().unwrap().bytes,MAX_FRAME as u64);
+}
+
+#[cfg(windows)]
+#[test]
+fn capture_fixture_child_stream() {
+    if std::env::var("CC_NATIVE_CAPTURE_CHILD").as_deref()!=Ok("1") {return;}
+    let mut bytes=Vec::new();std::io::stdin().take(4097).read_to_end(&mut bytes).unwrap();
+    assert_eq!(bytes,b"captured-owned-input");
+    println!("{{\"type\":\"thread.started\",\"thread_id\":\"owned-fixture-thread\"}}");
+    if std::env::var("CC_NATIVE_CAPTURE_HOLD").as_deref()==Ok("1") {
+        loop {std::thread::sleep(std::time::Duration::from_millis(20));}
+    }
+    println!("{{\"type\":\"turn.completed\"}}");
+}
+#[cfg(windows)]
+#[test]
+fn capture_job_controller_fixture() {
+    use std::os::windows::{io::AsHandle,process::CommandExt};
+    let Ok(mode)=std::env::var("CC_NATIVE_CAPTURE_CONTROLLER_MODE")else{return;};
+    let directory=PathBuf::from(std::env::var_os("CC_NATIVE_CAPTURE_CONTROLLER_DIR").unwrap());
+    let flags=if mode=="breakaway" {0x800}else{0};
+    let mut job=if mode=="outside"{native::empty_fixture_job(flags)}else{native::capture_fixture_job(flags)}.unwrap();
+    let mut command=crate::hidden_command(std::env::current_exe().unwrap().to_str().unwrap());
+    command.args(["--exact","native_export::tests::capture_fixture_child_stream","--nocapture"])
+        .env("CC_NATIVE_CAPTURE_CHILD","1").env("CC_NATIVE_CAPTURE_HOLD",if mode=="reclaim"||mode=="retention"{"1"}else{"0"})
+        .current_dir(&directory).stdin(std::process::Stdio::piped()).stdout(std::process::Stdio::piped()).stderr(std::process::Stdio::piped())
+        .creation_flags(crate::NO_WINDOW|0x4);
+    let mut child=OwnedFixtureChild{child:command.spawn().unwrap()};
+    let processes=native::Processes::pin(child.child.as_handle(),Some(job.get().unwrap().as_handle())).unwrap();
+    let before=serde_json::to_value(processes.collect()).unwrap();
+    if mode=="breakaway"||mode=="outside" {
+        if mode=="breakaway" {
+            assert_eq!(before["job_breakaway_disabled"],"failed");
+            assert!(processes.reclaim_children(std::time::Instant::now()+std::time::Duration::from_secs(1)).is_err());
+        }else{assert_eq!(before["root_in_owned_job"],"failed");assert_eq!(before["all_job_children_collected"],"unknown");}
+        child.child.kill().unwrap();child.child.wait().unwrap();let collection=serde_json::to_value(processes.finish()).unwrap();
+        fs::write(directory.join("controller-result.json"),serde_json::to_vec(&collection).unwrap()).unwrap();job.close().unwrap();return;
+    }
+    let root=processes.root();let child_birth=processes.child();
+    let rt:crate::SharedRuntime=Arc::new(crate::System::default());
+    let context=Context{root:directory.join("root"),jobs:directory.join("jobs"),home:directory.join("home"),codex_home:directory.join("codex"),gto:directory.join("gto.exe"),executable:std::env::current_exe().unwrap(),rt};
+    let jid="owned-capture-job";fs::create_dir_all(context.job_dir(jid)).unwrap();
+    let mut row=json!({"id":jid,"name":"owned fixture","status":"running","native_evidence_purpose":PURPOSE,"started_at":"owned-fixture-generation",
+        "pid":root.pid,"pid_created":root.created,"codex_pid":child_birth.pid,"codex_pid_created":child_birth.created,"cwd":directory});
+    context.save(&row).unwrap();let _=processes.finish();
+    let (mut capture,input)=context.begin_native_capture(jid,b"captured-owned-input",&[],child.child.as_handle(),Some(job.get().unwrap().as_handle())).unwrap();
+    let writer=capture.owned_input_writer(input,&mut child.child).unwrap();let input=spawn_owned_thread(NativeThreadRole::CaptureInput,move||writer.write()).unwrap();
+    let mut stdout=capture.stdout(child.child.stdout.take().unwrap()).unwrap();let mut stderr=capture.stderr(child.child.stderr.take().unwrap()).unwrap();
+    let (release,wait)=std::sync::mpsc::sync_channel::<()>(1);let (entered_tx,entered_rx)=std::sync::mpsc::sync_channel(1);
+    let retained=mode=="retention";
+    let readers=vec![spawn_owned_thread(NativeThreadRole::CaptureStdout,move||{
+        if retained {entered_tx.send(()).unwrap();wait.recv_timeout(std::time::Duration::from_secs(10)).unwrap();}
+        stdout.read_to_end(&mut Vec::new()).unwrap();
+    }).unwrap(),spawn_owned_thread(NativeThreadRole::CaptureStderr,move||{stderr.read_to_end(&mut Vec::new()).unwrap();}).unwrap()];
+    capture.resume_owned_child(&child.child).unwrap();
+    let until=std::time::Instant::now()+std::time::Duration::from_secs(8);
+    if mode=="reclaim" {
+        while !input.is_finished(){assert!(std::time::Instant::now()<until);std::thread::sleep(std::time::Duration::from_millis(5));}
+        capture.reclaim_owned_children(until).unwrap();
+    }
+    if retained {
+        entered_rx.recv_timeout(std::time::Duration::from_secs(3)).unwrap();
+        while !input.is_finished(){assert!(std::time::Instant::now()<until);std::thread::sleep(std::time::Duration::from_millis(5));}
+        assert!(child.child.try_wait().unwrap().is_none());
+        row["status"]=json!("failed");context.save(&row).unwrap();
+        let owned_child=unsafe{std::ptr::read(&child.child)};std::mem::forget(child);
+        retain_native_attempt(&context,&row,Box::new(owned_child),Some(capture),readers,Some(input)).unwrap();
+        assert!(has_retained_attempt(jid));drain_retained_attempts(&context,jid);assert!(has_retained_attempt(jid));
+        assert!(context.load(jid).unwrap()["native_export"].is_null());
+        release.send(()).unwrap();
+        while has_retained_attempt(jid) {assert!(std::time::Instant::now()<until);drain_retained_attempts(&context,jid);std::thread::sleep(std::time::Duration::from_millis(5));}
+        let row=context.load(jid).unwrap();assert_eq!(row["status"],"failed");assert_eq!(row["native_retention_drained"],true);
+        let selected=read_export_artifacts(context.job_dir(jid).join(row["native_export"]["directory"].as_str().unwrap()),&row["native_export"],jid,|_|Ok(())).unwrap();
+        assert_eq!(selected.metadata()["original_complete"],true);assert_eq!(selected.collection()["std_child_wait"]["reaped"],"confirmed");
+        let before_repeat=row["native_export"].clone();drain_retained_attempts(&context,jid);assert!(!has_retained_attempt(jid));assert_eq!(context.load(jid).unwrap()["native_export"],before_repeat);
+        fs::write(directory.join("controller-result.json"),serde_json::to_vec(selected.metadata()).unwrap()).unwrap();
+    }else{
+        loop {if capture.observe_child_wait(&mut child.child).unwrap().is_some(){break;}assert!(std::time::Instant::now()<until);std::thread::sleep(std::time::Duration::from_millis(5));}
+        for reader in readers {while !reader.is_finished(){assert!(std::time::Instant::now()<until);std::thread::sleep(std::time::Duration::from_millis(5));}reader.join().unwrap();}
+        input.join().unwrap().unwrap();
+        while serde_json::to_value(capture.processes.collect()).unwrap()["job_active_processes"]!=1 {assert!(std::time::Instant::now()<until);std::thread::sleep(std::time::Duration::from_millis(5));}
+        let collection=serde_json::to_value(capture.processes.collect()).unwrap();
+        assert_eq!(collection["job_active_processes"],1);assert_eq!(collection["all_job_children_collected"],"confirmed");
+        assert_eq!(collection["job_breakaway_disabled"],"confirmed");
+        let finished=capture.finish().unwrap();context.publish_native_export(finished).unwrap();
+        let row=context.load(jid).unwrap();let selected=read_export_artifacts(context.job_dir(jid).join(row["native_export"]["directory"].as_str().unwrap()),&row["native_export"],jid,|_|Ok(())).unwrap();
+        assert_eq!(selected.metadata()["original_complete"],true);assert_eq!(selected.metadata()["input"]["writer_closed"],"confirmed");
+        assert_eq!(selected.metadata()["stdout"]["eof"],"confirmed");assert_eq!(selected.metadata()["stderr"]["eof"],"confirmed");
+        assert_eq!(selected.collection()["std_child_wait"]["reaped"],"confirmed");
+        fs::write(directory.join("controller-result.json"),serde_json::to_vec(selected.metadata()).unwrap()).unwrap();
+    }
+    job.close().unwrap();
+}
+#[cfg(windows)]
+#[test]
+fn actual_capture_job_reclaim_retention_and_membership_controls() {
+    use std::os::windows::process::CommandExt;
+    for mode in ["normal","reclaim","retention","breakaway","outside"] {
+        let directory=tempfile::tempdir().unwrap();let mut guard=native::empty_fixture_job(0x2000).unwrap();
+        let mut command=crate::hidden_command(std::env::current_exe().unwrap().to_str().unwrap());
+        command.args(["--exact","native_export::tests::capture_job_controller_fixture","--nocapture"])
+            .env("CC_NATIVE_CAPTURE_CONTROLLER_MODE",mode).env("CC_NATIVE_CAPTURE_CONTROLLER_DIR",directory.path())
+            .current_dir(directory.path()).stdin(std::process::Stdio::null()).stdout(std::process::Stdio::null()).stderr(std::process::Stdio::null())
+            .creation_flags(crate::NO_WINDOW|0x4);
+        let mut child=OwnedFixtureChild{child:command.spawn().unwrap()};
+        native::assign_fixture_child(&guard,&child.child).unwrap();native::resume_child(&child.child).unwrap();
+        let until=std::time::Instant::now()+std::time::Duration::from_secs(20);
+        loop {if let Some(status)=child.child.try_wait().unwrap(){assert!(status.success(),"{mode}");break;}
+            assert!(std::time::Instant::now()<until,"{mode}");std::thread::sleep(std::time::Duration::from_millis(10));}
+        let value:Value=serde_json::from_slice(&fs::read(directory.path().join("controller-result.json")).unwrap()).unwrap();
+        if mode=="breakaway" {assert_eq!(value["job_breakaway_disabled"],"failed");}
+        else if mode=="outside" {assert_eq!(value["root_in_owned_job"],"failed");}
+        else {assert_eq!(value["original_complete"],true);assert_eq!(value["collection"]["os_observation"]["job_active_processes"],1);}
+        guard.close().unwrap();
+    }
+}
+
+#[test]
+fn task_progress_real_start_and_drop_collects_the_same_notification_worker() {
+    struct LocalRuntime {start:std::time::Instant,tools:PathBuf}
+    impl crate::Runtime for LocalRuntime {
+        fn mono(&self)->f64 {self.start.elapsed().as_secs_f64()}
+        fn env(&self)->std::collections::BTreeMap<String,String> {std::collections::BTreeMap::new()}
+        fn task_title_tools(&self)->PathBuf {self.tools.clone()}
+        fn call(&self,_:crate::Call)->io::Result<crate::Reply> {panic!("no external process is allowed by fixture")}
+        fn spawn(&self,_:&crate::Spawn)->io::Result<Box<dyn crate::Running>> {Err(rejected())}
+        fn spawn_supervisor(&self,_:&Path,_:&Path,_:&Path,_:&str)->io::Result<bool> {Err(rejected())}
+    }
+    let dir=tempfile::tempdir().unwrap();let rt:crate::SharedRuntime=Arc::new(LocalRuntime{start:std::time::Instant::now(),tools:dir.path().join("missing-owned-names")});
+    let mut task=crate::notify::TaskProgress::new(Some("test-notifier-no-process".into()),dir.path().into(),rt);task.backoff=0.;task.shutdown_cap=3.;
+    let mut owner=ProgressOwner::new(task,true);owner.start(&json!({"id":"test-progress","status":"running"}));
+    assert_eq!(owner.progress.collection_facts()["worker_started"],true);
+    assert!(owner.collect());let facts=owner.progress.collection_facts();assert_eq!(facts["worker_joined"],true);assert_eq!(facts["done_received"],true);
+    // Failed delivery is existing business data. This assertion is worker
+    // termination/collection only, not proof that any notice was delivered.
+}
+#[test]
+fn same_notification_worker_pending_terminal_and_panic_are_distinct() {
+    use crate::notify::{ProgressCompletion,TaskProgress};
+    for mode in ["normal","sender_drop","panic","pending_done","done_before_return"] {
+        let dir=tempfile::tempdir().unwrap();let rt:crate::SharedRuntime=Arc::new(crate::System::default());
+        let mut task=TaskProgress::new(None,dir.path().into(),rt);task.shutdown_cap=0.01;
+        let (entered_tx,entered_rx)=std::sync::mpsc::sync_channel(1);let (release_tx,release_rx)=std::sync::mpsc::sync_channel(1);let chosen=mode.to_string();
+        task.completion_test_worker(move |done| {
+            if chosen=="done_before_return" {done.send(()).unwrap();}
+            if chosen=="sender_drop" {drop(done);entered_tx.send(()).unwrap();return;}
+            entered_tx.send(()).unwrap();
+            if chosen=="pending_done"||chosen=="done_before_return" {release_rx.recv_timeout(std::time::Duration::from_secs(3)).unwrap();}
+            assert_ne!(chosen,"panic","notification fixture panic");
+            if chosen!="done_before_return" {done.send(()).unwrap();}
+        });
+        entered_rx.recv_timeout(std::time::Duration::from_secs(3)).unwrap();let mut owner=ProgressOwner::new(task,true);
+        if mode=="pending_done"||mode=="done_before_return" {assert!(!owner.close());assert!(!owner.closed);assert_eq!(owner.progress.completion(),ProgressCompletion::Pending);release_tx.send(()).unwrap();}
+        let success=owner.collect();assert!(owner.closed);assert_eq!(success,matches!(mode,"normal"|"pending_done"|"done_before_return"));
+        let facts=owner.progress.collection_facts();assert_eq!(facts["worker_joined"],true);assert_eq!(facts["close_requested"],true);assert_eq!(facts["done_received"],success);
+        assert_eq!(owner.close(),success);assert_eq!(owner.progress.collection_facts(),facts);
+    }
+}
+#[test]
+fn disconnected_notification_sender_with_live_worker_remains_pending_until_join() {
+    use crate::notify::{ProgressCompletion,TaskProgress};
+    let dir=tempfile::tempdir().unwrap();let rt:crate::SharedRuntime=Arc::new(crate::System::default());let mut task=TaskProgress::new(None,dir.path().into(),rt);task.shutdown_cap=0.01;
+    let (entered_tx,entered_rx)=std::sync::mpsc::sync_channel(1);let (release_tx,release_rx)=std::sync::mpsc::sync_channel(1);
+    task.completion_test_worker(move |done| {drop(done);entered_tx.send(()).unwrap();release_rx.recv_timeout(std::time::Duration::from_secs(3)).unwrap();});
+    entered_rx.recv_timeout(std::time::Duration::from_secs(3)).unwrap();assert_eq!(task.close_status(),ProgressCompletion::Pending);assert_eq!(task.collection_facts()["worker_joined"],false);
+    release_tx.send(()).unwrap();let mut owner=ProgressOwner::new(task,true);assert!(!owner.collect());assert_eq!(owner.progress.completion(),ProgressCompletion::Failed);assert_eq!(owner.progress.collection_facts()["worker_joined"],true);
+}
+#[test]
+fn ordinary_notification_close_bool_and_timeout_remain_compatible() {
+    use crate::notify::{ProgressCompletion,TaskProgress};
+    let dir=tempfile::tempdir().unwrap();let rt:crate::SharedRuntime=Arc::new(crate::System::default());let mut task=TaskProgress::new(None,dir.path().into(),rt);assert!(task.close());
+    let (tx,rx)=std::sync::mpsc::sync_channel::<()>(1);task.completion_test_worker(move |done| {rx.recv_timeout(std::time::Duration::from_secs(3)).unwrap();done.send(()).unwrap();});task.shutdown_cap=0.01;
+    assert!(!task.close());tx.send(()).unwrap();task.shutdown_cap=3.;assert!(task.close());assert!(task.close());assert_eq!(task.completion(),ProgressCompletion::Done);assert_eq!(task.collection_facts()["worker_joined"],true);
+}
+
+#[test]
+fn progress_owner_drop_waits_for_real_worker_before_returning_failed_business() {
+    let dir=tempfile::tempdir().unwrap();let rt:crate::SharedRuntime=Arc::new(crate::System::default());
+    let mut task=crate::notify::TaskProgress::new(None,dir.path().into(),rt);task.shutdown_cap=0.01;
+    let (ready_tx,ready_rx)=std::sync::mpsc::sync_channel(1);let (release_tx,release_rx)=std::sync::mpsc::sync_channel(1);
+    task.completion_test_worker(move |done| {ready_tx.send(()).unwrap();release_rx.recv_timeout(std::time::Duration::from_secs(5)).unwrap();done.send(()).unwrap();});
+    ready_rx.recv_timeout(std::time::Duration::from_secs(3)).unwrap();
+    let (attempt_tx,attempt_rx)=std::sync::mpsc::sync_channel(1);let (returned_tx,returned_rx)=std::sync::mpsc::sync_channel(1);
+    let worker=std::thread::Builder::new().spawn(move || {
+        let result=(||->io::Result<()> {let mut owner=ProgressOwner::new(task,true);assert!(!owner.close());attempt_tx.send(()).unwrap();Err(rejected())})();
+        returned_tx.send(result.is_err()).unwrap();
+    }).unwrap();
+    attempt_rx.recv_timeout(std::time::Duration::from_secs(3)).unwrap();assert!(returned_rx.try_recv().is_err());
+    release_tx.send(()).unwrap();assert!(returned_rx.recv_timeout(std::time::Duration::from_secs(3)).unwrap());worker.join().unwrap();
+}
+

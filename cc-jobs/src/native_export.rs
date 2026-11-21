@@ -15,6 +15,7 @@ const MAX_FRAME: usize = 2 << 20;
 const MAX_RECEIPT: u64 = 128 << 10;
 const MAX_BINDING: u64 = MAX_STREAM;
 const MAX_RPC_PAGES: usize = 64;
+pub(crate) const NATIVE_ATTEMPT_BUDGET_SECS:f64=600.;
 
 // Avoid requiring serde's optional proc-macro feature in the existing crate.
 macro_rules! export_fields {
@@ -704,17 +705,36 @@ Ok(SelectedExport{directory,receipt,collection,binding})
 
 
 
-pub(crate) struct ProgressOwner {progress:crate::notify::TaskProgress,required:bool,closed:bool}
+pub(crate) struct ProgressOwner {
+    progress:crate::notify::TaskProgress,required:bool,closed:bool,failed:bool,
+    report:Option<(PathBuf,Value)>,reported:bool,
+}
 impl ProgressOwner {
-    pub(crate) fn new(progress:crate::notify::TaskProgress,required:bool)->Self {Self{progress,required,closed:false}}
-    pub(crate) fn close(&mut self)->bool {let done=self.progress.close();self.closed|=done;done}
+    pub(crate) fn new(progress:crate::notify::TaskProgress,required:bool)->Self {
+        Self{progress,required,closed:false,failed:false,report:None,reported:false}
+    }
+    pub(crate) fn bind_job(&mut self,directory:&Path,job:&Value) {
+        self.report=Some((directory.join("notification-collection.private.json"),json!({"job_id":job["id"],"started_at":job["started_at"],"root_pid":job["pid"],"root_created":job["pid_created"]})));
+    }
+    pub(crate) fn close(&mut self)->bool {
+        use crate::notify::ProgressCompletion;
+        let status=self.progress.close_status();
+        if status!=ProgressCompletion::Pending {self.closed=true;self.failed|=status==ProgressCompletion::Failed;}
+        if self.required&&self.closed&&!self.reported {
+            self.reported=true;
+            if let Some((path,binding))=&self.report {
+                let receipt=json!({"domain":"native-notification-collection/1","binding":binding,"collection":self.progress.collection_facts(),"failed":self.failed});
+                if save_json(path,&receipt,MAX_RECEIPT).is_err(){self.failed=true;}
+            }
+        }
+        self.closed&&!self.failed&&status==ProgressCompletion::Done
+    }
+    pub(crate) fn collect(&mut self)->bool {completion_barrier(||{let _=self.close();self.closed});!self.failed}
 }
 impl std::ops::Deref for ProgressOwner {type Target=crate::notify::TaskProgress;fn deref(&self)->&Self::Target{&self.progress}}
 impl std::ops::DerefMut for ProgressOwner {fn deref_mut(&mut self)->&mut Self::Target{&mut self.progress}}
 fn completion_barrier(mut close:impl FnMut()->bool){while !close(){std::thread::yield_now();}}
-impl Drop for ProgressOwner {
-    fn drop(&mut self){if self.required&&!self.closed{completion_barrier(||self.close());}}
-}
+impl Drop for ProgressOwner {fn drop(&mut self){if self.required&&!self.closed{let _=self.collect();}}}
 
 #[derive(Clone,Copy,Debug,PartialEq,Eq)]
 pub(crate) enum NativeThreadRole { CaptureInput,CaptureStdout,CaptureStderr,OriginInput,OriginStdout,OriginStderr }
@@ -1111,6 +1131,7 @@ mod native {
         writer:Option<std::thread::JoinHandle<io::Result<()>>>,
         stdout:Option<std::thread::JoinHandle<io::Result<()>>>,stderr:Option<std::thread::JoinHandle<io::Result<()>>>,
         facts:OriginFacts,grace_at:Option<std::time::Instant>,shutdown:Arc<std::sync::atomic::AtomicBool>,
+        stdout_state:Arc<Mutex<StreamState>>,stderr_state:Arc<Mutex<StreamState>>,
     }
     impl OriginOwned {
 
@@ -1133,42 +1154,52 @@ mod native {
     fn origin_pipe(file:impl std::os::windows::io::IntoRawHandle)->CloseOnce<File> {
         CloseOnce::new(unsafe{File::from_raw_handle(file.into_raw_handle())},close_file)
     }
-    fn origin_read_lines(mut file:CloseOnce<File>,path:PathBuf,send:std::sync::mpsc::SyncSender<io::Result<Vec<u8>>>,shutdown:Arc<std::sync::atomic::AtomicBool>)->io::Result<()> {
+    #[cfg(test)]
+    thread_local! {pub(super) static ORIGIN_FORWARD_FULL_OBSERVER:std::cell::RefCell<Option<std::sync::mpsc::SyncSender<()>>>=const {std::cell::RefCell::new(None)};}
+    pub(super) fn origin_read_lines<R:Read>(mut file:CloseOnce<R>,path:PathBuf,send:std::sync::mpsc::SyncSender<io::Result<Vec<u8>>>,
+        stop_forward:Arc<std::sync::atomic::AtomicBool>,state:Arc<Mutex<StreamState>>)->io::Result<()> {
         use std::io::BufRead;
         let primary=(||->io::Result<()>{
-            let mut saved=new_file(&path)?;let mut reader=std::io::BufReader::new(file.get_mut()?);let mut total=0usize;
-            let work=(||->io::Result<()>{
-                loop {
-                    let mut line=Vec::new();
-                    let count=Read::take(&mut reader,MAX_FRAME as u64+1).read_until(b'\n',&mut line)?;
-                    if count==0{break;}
-                    total=total.checked_add(line.len()).ok_or_else(rejected)?;
-                    if line.len()>MAX_FRAME||total as u64>MAX_STREAM{return Err(rejected());}
-                    saved.get_mut()?.write_all(&line)?;
-                    // Receiver owns the finite exchange deadline. If it closes,
-                    // preserve the already read raw bytes then finish this pipe.
+            let stream=OriginalStream::new(file.get_mut()?,&path,state.clone(),None)?;
+            let mut reader=std::io::BufReader::new(stream);let mut forwarding=true;
+            loop {
+                let mut line=Vec::new();
+                let count=Read::take(&mut reader,MAX_FRAME as u64+1).read_until(b'\n',&mut line)?;
+                if count==0 {break;}
+                if line.len()>MAX_FRAME {return Err(rejected());}
+                if stop_forward.load(std::sync::atomic::Ordering::Acquire) {forwarding=false;}
+                if forwarding {
                     let mut pending=Ok(line);
-                    loop{match send.try_send(pending){
-                        Ok(())=>break,
-                        Err(std::sync::mpsc::TrySendError::Full(value))=>{pending=value;if shutdown.load(std::sync::atomic::Ordering::Acquire){break;}std::thread::yield_now();},
-                        Err(std::sync::mpsc::TrySendError::Disconnected(_))=>break,
-                    }}
-                    if shutdown.load(std::sync::atomic::Ordering::Acquire){break;}
+                    loop {
+                        if stop_forward.load(std::sync::atomic::Ordering::Acquire) {forwarding=false;break;}
+                        match send.try_send(pending) {
+                            Ok(())=>break,
+                            Err(std::sync::mpsc::TrySendError::Full(value))=>{
+                                #[cfg(test)] ORIGIN_FORWARD_FULL_OBSERVER.with(|hook|{if let Some(tx)=hook.borrow_mut().take(){let _=tx.send(());}});
+                                pending=value;std::thread::yield_now();
+                            }
+                            Err(std::sync::mpsc::TrySendError::Disconnected(_))=>{forwarding=false;break;}
+                        }
+                    }
                 }
-                saved.get()?.sync_all()
-            })();
-            finish_owned(&mut saved,work)
+                // Shutdown only stops forwarding. The same held input continues
+                // through OriginalStream until real EOF, with a raw identity seal.
+            }
+            Ok(())
         })();
-        if primary.is_err(){let _=send.try_send(Err(rejected()));}
-        finish_owned(&mut file,primary)
+        if primary.is_err() {let _=send.try_send(Err(rejected()));}
+        let result=finish_owned(&mut file,primary);
+        if result.is_err() {state.lock().unwrap_or_else(|p|p.into_inner()).persisted=Observed::Failed;}
+        result
     }
-    fn origin_stderr(mut file:CloseOnce<File>,path:PathBuf)->io::Result<()> {
+    fn origin_stderr(mut file:CloseOnce<File>,path:PathBuf,state:Arc<Mutex<StreamState>>)->io::Result<()> {
         let primary=(||->io::Result<()>{
-            let mut saved=new_file(&path)?;let mut total=0u64;let mut chunk=[0u8;8192];
-            let work=(||->io::Result<()>{loop{let n=file.get_mut()?.read(&mut chunk)?;if n==0{break;}
-                total+=n as u64;if total>MAX_STREAM{return Err(rejected());}saved.get_mut()?.write_all(&chunk[..n])?;
-            }saved.get()?.sync_all()})();finish_owned(&mut saved,work)
-        })();finish_owned(&mut file,primary)
+            let mut stream=OriginalStream::new(file.get_mut()?,&path,state.clone(),None)?;
+            let mut chunk=[0u8;8192];while stream.read(&mut chunk)?!=0 {} Ok(())
+        })();
+        let result=finish_owned(&mut file,primary);
+        if result.is_err() {state.lock().unwrap_or_else(|p|p.into_inner()).persisted=Observed::Failed;}
+        result
     }
     fn origin_settle(mut state:OriginOwned,deadline:std::time::Instant)->(Option<OriginOwned>,Value) {
         state.shutdown.store(true,std::sync::atomic::Ordering::Release);
@@ -1199,11 +1230,14 @@ mod native {
                 }
                 let child_handle_close=if super::close_owned_child(state.child).is_ok(){Observed::Confirmed}else{Observed::Failed};
                 let job_close=if state.job.close().is_ok(){Observed::Confirmed}else{Observed::Failed};
-                let success=state.facts.unforced_success()&&child_handle_close==Observed::Confirmed&&job_close==Observed::Confirmed&&retained_close_count()==0;
+                let stdout=state.stdout_state.lock().unwrap_or_else(|p|p.into_inner()).clone();
+                let stderr=state.stderr_state.lock().unwrap_or_else(|p|p.into_inner()).clone();
+                let raw_complete=stdout.eof==Observed::Confirmed&&stdout.persisted==Observed::Confirmed&&stderr.eof==Observed::Confirmed&&stderr.persisted==Observed::Confirmed;
+                let success=raw_complete&&state.facts.unforced_success()&&child_handle_close==Observed::Confirmed&&job_close==Observed::Confirmed&&retained_close_count()==0;
                 let receipt=json!({"domain":"owned-readonly-origin-collection/1","child":state.birth,"facts":state.facts,
                     "child_wait":state.facts.child_wait,"exit_code":state.facts.exit_code,"job_active":state.facts.job_active,
                     "thread_error":state.facts.thread_error,"terminate_attempted":state.facts.child_terminate.attempted||state.facts.job_terminate.attempted,
-                    "pipe_threads_complete":true,"job_close":job_close,"child_handle_close":child_handle_close,
+                    "pipe_threads_complete":true,"stdout":stdout,"stderr":stderr,"raw_streams_complete":raw_complete,"job_close":job_close,"child_handle_close":child_handle_close,
                     "retained_close_failures":retained_close_count(),"collected":true,"operation_success":success,"AI_turn_started":false});
                 return (None,receipt);
             }
@@ -1230,7 +1264,8 @@ mod native {
         let receipt=json!({"domain":"owned-readonly-origin-collection/1","child":state.birth,"facts":state.facts,
             "child_wait":state.facts.child_wait,"exit_code":state.facts.exit_code,"job_active":state.facts.job_active,
             "thread_error":state.facts.thread_error,"terminate_attempted":state.facts.child_terminate.attempted||state.facts.job_terminate.attempted,
-            "pipe_threads_complete":false,"collected":false,"operation_success":false,"retained_owner":true,
+            "pipe_threads_complete":false,"stdout":state.stdout_state.lock().unwrap_or_else(|p|p.into_inner()).clone(),
+            "stderr":state.stderr_state.lock().unwrap_or_else(|p|p.into_inner()).clone(),"raw_streams_complete":false,"collected":false,"operation_success":false,"retained_owner":true,
             "retained_close_failures":retained_close_count(),"AI_turn_started":false});
         (Some(state),receipt)
     }
@@ -1271,7 +1306,7 @@ mod native {
             // Current token and Windows directories identify the normal profile;
             // caller API-key/endpoint/config environment is not inherited.
             let child=command.spawn()?;
-            let mut owner=Self{owned:Some(OriginOwned{child,job,birth:None,writer:None,stdout:None,stderr:None,facts:OriginFacts::default(),grace_at:None,shutdown:Arc::new(std::sync::atomic::AtomicBool::new(false))}),directory:directory.to_path_buf()};
+            let mut owner=Self{owned:Some(OriginOwned{child,job,birth:None,writer:None,stdout:None,stderr:None,facts:OriginFacts::default(),grace_at:None,shutdown:Arc::new(std::sync::atomic::AtomicBool::new(false)),stdout_state:Arc::new(Mutex::new(StreamState::default())),stderr_state:Arc::new(Mutex::new(StreamState::default()))}),directory:directory.to_path_buf()};
             let state=owner.owned.as_mut().ok_or_else(rejected)?;
             state.birth=Some(birth(state.child.as_handle())?);
             if unsafe{AssignProcessToJobObject(raw,state.child.as_raw_handle() as HANDLE)}==0{
@@ -1297,9 +1332,11 @@ mod native {
             let stdout_path=directory.join("connection.stdout.native.jsonl");
             let stderr_path=directory.join("connection.stderr.native.txt");
             let shutdown=owner.owned.as_ref().ok_or_else(rejected)?.shutdown.clone();
-            let output=spawn_owned_thread(NativeThreadRole::OriginStdout,move||origin_read_lines(stdout,stdout_path,reply_tx,shutdown))?;
+            let stream_state=owner.owned.as_ref().ok_or_else(rejected)?.stdout_state.clone();
+            let output=spawn_owned_thread(NativeThreadRole::OriginStdout,move||origin_read_lines(stdout,stdout_path,reply_tx,shutdown,stream_state))?;
             owner.owned.as_mut().ok_or_else(rejected)?.stdout=Some(output);
-            let errors=spawn_owned_thread(NativeThreadRole::OriginStderr,move||origin_stderr(stderr,stderr_path))?;
+            let stream_state=owner.owned.as_ref().ok_or_else(rejected)?.stderr_state.clone();
+            let errors=spawn_owned_thread(NativeThreadRole::OriginStderr,move||origin_stderr(stderr,stderr_path,stream_state))?;
             let state=owner.owned.as_mut().ok_or_else(rejected)?;state.stderr=Some(errors);
             if unsafe{NtResumeProcess(state.child.as_raw_handle() as HANDLE)}<0{return Err(rejected());}
             let mut transport=ConnectedReadonly::from_owned_connection(request_tx,reply_rx,std::time::Instant::now()+std::time::Duration::from_secs(40))?;
@@ -1331,25 +1368,29 @@ mod native {
         let mut command=crate::hidden_command(std::env::current_exe()?.to_str().ok_or_else(rejected)?);
         command.args(["--exact","native_export::tests::owned_stdin_fixture_helper","--nocapture"])
             .env("CC_NATIVE_EXPORT_STDIN_FIXTURE","1").env("CC_NATIVE_EXPORT_STDIN_RESULT",directory.join("owned-reader-fixture.txt"))
-            .current_dir(directory).stdin(std::process::Stdio::piped()).stdout(std::process::Stdio::piped()).stderr(std::process::Stdio::null())
+            .current_dir(directory).stdin(std::process::Stdio::piped()).stdout(std::process::Stdio::piped()).stderr(std::process::Stdio::piped())
             .creation_flags(crate::NO_WINDOW|0x4);
         let child=command.spawn()?;
         let mut owner=OriginReader{owned:Some(OriginOwned{child,job,birth:None,writer:None,stdout:None,stderr:None,
-            facts:OriginFacts::default(),grace_at:None,shutdown:Arc::new(std::sync::atomic::AtomicBool::new(false))}),directory:directory.to_path_buf()};
+            facts:OriginFacts::default(),grace_at:None,shutdown:Arc::new(std::sync::atomic::AtomicBool::new(false)),stdout_state:Arc::new(Mutex::new(StreamState::default())),stderr_state:Arc::new(Mutex::new(StreamState::default()))}),directory:directory.to_path_buf()};
         let state=owner.owned.as_mut().ok_or_else(rejected)?;state.birth=Some(birth(state.child.as_handle())?);
         if unsafe{AssignProcessToJobObject(raw,state.child.as_raw_handle() as HANDLE)}==0{return Err(io::Error::last_os_error());}
         let mut stdin=origin_pipe(state.child.stdin.take().ok_or_else(rejected)?);stdin.close()?;
         let stdout=origin_pipe(state.child.stdout.take().ok_or_else(rejected)?);
+        let stderr=origin_pipe(state.child.stderr.take().ok_or_else(rejected)?);
         let (release,wait)=std::sync::mpsc::sync_channel::<()>(1);
+        let (send,receive)=std::sync::mpsc::sync_channel(1);drop(receive);
+        let shutdown=state.shutdown.clone();let stream_state=state.stdout_state.clone();let path=directory.join("fixture-stdout.native.jsonl");
         state.stdout=Some(spawn_owned_thread(NativeThreadRole::OriginStdout,move||{
             if delay_pipe{wait.recv_timeout(std::time::Duration::from_secs(5)).map_err(|_|rejected())?;}
-            let mut stream=stdout;let primary=stream.get_mut()?.take(MAX_FRAME as u64).read_to_end(&mut Vec::new()).map(|_|());
-            finish_owned(&mut stream,primary)
+            origin_read_lines(stdout,path,send,shutdown,stream_state)
         })?);
+        let path=directory.join("fixture-stderr.native.txt");let stream_state=state.stderr_state.clone();
+        state.stderr=Some(spawn_owned_thread(NativeThreadRole::OriginStderr,move||origin_stderr(stderr,path,stream_state))?);
         resume_child(&state.child)?;
         if !delay_pipe{
             let until=std::time::Instant::now()+std::time::Duration::from_secs(5);
-            loop{let done=state.child.try_wait()?.is_some()&&state.stdout.as_ref().is_some_and(std::thread::JoinHandle::is_finished);
+            loop{let done=state.child.try_wait()?.is_some()&&state.stdout.as_ref().is_some_and(std::thread::JoinHandle::is_finished)&&state.stderr.as_ref().is_some_and(std::thread::JoinHandle::is_finished);
                 if done{break;}if std::time::Instant::now()>=until{return Err(rejected());}std::thread::yield_now();}
         }
         let state=owner.owned.take().ok_or_else(rejected)?;let mut first=true;
@@ -1358,6 +1399,37 @@ mod native {
             origin_settle(state,std::time::Instant::now()+budget)
         },|_,complete|{if !complete{let _=release.try_send(());}});
         if deferred!=delay_pipe{return Err(rejected());}Ok(receipt)
+    }
+
+
+    #[cfg(test)]
+    pub(super) fn capture_fixture_job(flags:u32)->io::Result<CloseOnce<OwnedHandle>> {
+        use windows_sys::Win32::System::JobObjects::{CreateJobObjectW,SetInformationJobObject,AssignProcessToJobObject};
+        let raw=unsafe{CreateJobObjectW(std::ptr::null(),std::ptr::null())};
+        if raw.is_null(){return Err(io::Error::last_os_error());}
+        let owner=CloseOnce::new(unsafe{OwnedHandle::from_raw_handle(raw as _)},close_owned);
+        let mut limits:JOBOBJECT_EXTENDED_LIMIT_INFORMATION=unsafe{zeroed()};limits.BasicLimitInformation.LimitFlags=flags;
+        if unsafe{SetInformationJobObject(raw,JobObjectExtendedLimitInformation,(&limits as *const JOBOBJECT_EXTENDED_LIMIT_INFORMATION).cast(),size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>() as u32)}==0{return Err(io::Error::last_os_error());}
+        if unsafe{AssignProcessToJobObject(raw,GetCurrentProcess())}==0{return Err(io::Error::last_os_error());}
+        Ok(owner)
+    }
+
+
+    #[cfg(test)]
+    pub(super) fn empty_fixture_job(flags:u32)->io::Result<CloseOnce<OwnedHandle>> {
+        use windows_sys::Win32::System::JobObjects::{CreateJobObjectW,SetInformationJobObject};
+        let raw=unsafe{CreateJobObjectW(std::ptr::null(),std::ptr::null())};
+        if raw.is_null(){return Err(io::Error::last_os_error());}
+        let owner=CloseOnce::new(unsafe{OwnedHandle::from_raw_handle(raw as _)},close_owned);
+        let mut limits:JOBOBJECT_EXTENDED_LIMIT_INFORMATION=unsafe{zeroed()};limits.BasicLimitInformation.LimitFlags=flags;
+        if unsafe{SetInformationJobObject(raw,JobObjectExtendedLimitInformation,(&limits as *const JOBOBJECT_EXTENDED_LIMIT_INFORMATION).cast(),size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>() as u32)}==0{return Err(io::Error::last_os_error());}
+        Ok(owner)
+    }
+    #[cfg(test)]
+    pub(super) fn assign_fixture_child(job:&CloseOnce<OwnedHandle>,child:&std::process::Child)->io::Result<()> {
+        if unsafe{windows_sys::Win32::System::JobObjects::AssignProcessToJobObject(job.get()?.as_raw_handle() as HANDLE,child.as_raw_handle() as HANDLE)}==0 {
+            Err(io::Error::last_os_error())
+        }else{Ok(())}
     }
 
     pub(super) fn current_process()->io::Result<CloseOnce<OwnedHandle>> {

@@ -1090,37 +1090,37 @@ impl Context {
         Ok(())
     }
     fn supervise_owned(&self, jid: &str) -> Result<()> {
-        let native_evidence=self.load(jid)?["native_evidence_purpose"]=="p33-skill-business-v11";
-        let pid = self.rt.pid();
-        let (process_tree, process_tree_root_created): (
-            Option<crate::pause::ProcessTreeScope>,
-            Option<u64>,
-        ) = if self.rt.supports_process_tree_job() {
-            let created = self
-                .rt
-                .proc_created_checked(pid)?
-                .ok_or_else(|| Error::new("process tree root identity is unavailable"))?;
-            match crate::pause::contain_for_evidence(pid, created,native_evidence) {
-                Ok(scope) => (Some(scope), Some(created)),
-                Err(error) => {
-                    if native_evidence{return Err(error.into());}
-                    self.rt.diagnostic(&format!(
-                        "Windows process tree containment unavailable; using retained-handle cancellation: {}",
-                        redact_local_log_secrets(&error.to_string(), &self.rt.env())
-                    ));
-                    (None, Some(created))
-                }
-            }
-        } else {
-            if native_evidence{return Err(Error::new("native evidence Job ownership unavailable"));}
-            (None, None)
-        };
+        let pid=self.rt.pid();
+        let process_tree:Option<crate::pause::ProcessTreeScope>;
         {
-            let _state = self.job_lock(jid, "state.lock")?;
-            let mut job = self.load(jid)?;
-            if s(&job, "status") != "queued" || job["cancel_requested"] == true {
-                return Ok(());
-            }
+            let _state=self.job_lock(jid,"state.lock")?;
+            let mut job=self.load(jid)?;
+            if s(&job,"status")!="queued"||job["cancel_requested"]==true{return Ok(());}
+            let native_evidence=job["native_evidence_purpose"]=="p33-skill-business-v11";
+            let (scope, process_tree_root_created): (
+                Option<crate::pause::ProcessTreeScope>,
+                Option<u64>,
+            ) = if self.rt.supports_process_tree_job() {
+                let created = self
+                    .rt
+                    .proc_created_checked(pid)?
+                    .ok_or_else(|| Error::new("process tree root identity is unavailable"))?;
+                match crate::pause::contain_for_evidence(pid, created,native_evidence) {
+                    Ok(scope) => (Some(scope), Some(created)),
+                    Err(error) => {
+                        if native_evidence{return Err(error.into());}
+                        self.rt.diagnostic(&format!(
+                            "Windows process tree containment unavailable; using retained-handle cancellation: {}",
+                            redact_local_log_secrets(&error.to_string(), &self.rt.env())
+                        ));
+                        (None, Some(created))
+                    }
+                }
+            } else {
+                if native_evidence{return Err(Error::new("native evidence Job ownership unavailable"));}
+                (None, None)
+            };
+            process_tree=scope;
             if process_tree.is_some() {
                 job["process_tree_version"] = json!(1);
             } else if let Some(fields) = job.as_object_mut() {
@@ -1330,9 +1330,10 @@ impl Context {
                 "last_message.md"
             });
             if native_enabled {
-                let mut n = TaskProgress::new(self.ao_executable(), self.jobs.clone(), self.rt.clone());
-                n.start(&job);
-                notifier = Some(crate::native_export::ProgressOwner::new(n,true));
+                let n = TaskProgress::new(self.ao_executable(), self.jobs.clone(), self.rt.clone());
+                let mut owner=crate::native_export::ProgressOwner::new(n,true);
+                owner.bind_job(&dir,&job);owner.start(&job);
+                notifier=Some(owner);
             }
             let spawn=self.execution_spawn(&job)?;
             let native_prompt=if native_enabled{Some(self.read_file(&spawn.prompt)?)}else{None};
@@ -1418,7 +1419,7 @@ impl Context {
                         return Err(Error::new("native evidence cancelled or generation changed"));
                     }
                 }
-                if native_enabled&&self.rt.mono()-t0>=600. {return Err(Error::new("native evidence whole-attempt deadline"));}
+                if native_enabled&&self.rt.mono()-t0>=crate::native_export::NATIVE_ATTEMPT_BUDGET_SECS {return Err(Error::new("native evidence whole-attempt deadline"));}
                 let ev = match qrx.recv_timeout(std::time::Duration::from_millis(500)) {
                     Ok(ev) => Some(ev),
                     Err(mpsc::RecvTimeoutError::Timeout) => None,
@@ -1861,8 +1862,17 @@ impl Context {
                 .spawn();
         }
         if let Some(n) = &mut notifier {
-            n.update(&job, true);
-            n.close();
+            n.update(&job,true);
+            if native_enabled {
+                if !n.collect() {
+                    let _state=self.job_lock(jid,"state.lock")?;let mut current=self.load(jid)?;
+                    if current["started_at"]==job["started_at"] {
+                        current["native_notification_failed"]=json!(true);
+                        if current["status"]=="succeeded"{current["status"]=json!("failed");current["activity"]=json!("notification worker failed after collection");}
+                        self.save(&current)?;
+                    }
+                }
+            }else{n.close();}
         }
         Ok(false)
     }

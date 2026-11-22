@@ -86,13 +86,16 @@ func (v watchdogTaskView) valid() bool {
 }
 
 type watchdogStopped struct {
-	OwnedInstance bool
+	// Ownership is of the original issued task generation, including its
+	// fully collected never-started or already-exited published successor.
+	// This field does not claim that a current running instance exists.
+	OwnedGeneration bool
 	AllReaped bool
 	HoldAcquired bool
 }
 
 func (v watchdogStopped) valid() bool {
-	return v.OwnedInstance && v.AllReaped && v.HoldAcquired
+	return v.OwnedGeneration && v.AllReaped && v.HoldAcquired
 }
 
 type watchdogSample struct {
@@ -221,6 +224,8 @@ type watchdogUpdateResult struct {
 	RollbackSucceeded bool `json:"rollback_succeeded"`
 	ReconciliationRequired bool `json:"reconciliation_required"`
 	CleanupFailed bool `json:"cleanup_failed"`
+	Unreaped bool `json:"unreaped"`
+	StopAttempted bool `json:"stop_attempted"`
 	RecoveryReason string `json:"recovery_reason,omitempty"`
 	RecoveryCleanupFailed bool `json:"recovery_cleanup_failed"`
 	TaskUnchanged bool `json:"task_unchanged"`
@@ -239,6 +244,10 @@ func runWatchdogUpdate(ctx context.Context, apply bool, open watchdogUpdateOpene
 	r, err := open(ctx)
 	if r != nil {
 		defer func() {
+			if stop,ok:=r.Resident.(interface{StopAttempted()bool});ok{result.StopAttempted=stop.StopAttempted()}
+			if collection,ok:=r.Resident.(interface{CollectionPending()bool});ok{
+				result.Unreaped=collection.CollectionPending()
+			}
 			if r.Files != nil {
 				result.Steps = r.Files.Steps()
 				result.Updated = result.Steps.Published
@@ -288,7 +297,7 @@ func runWatchdogUpdate(ctx context.Context, apply bool, open watchdogUpdateOpene
 	}
 	result.TaskUnchanged = true
 	if !apply {
-		if recheck() != nil || !taskEqual(ctx) {
+		if recheck() != nil || !taskEqual(ctx) || ctx.Err() != nil {
 			result.TaskUnchanged = false
 			result.Reason = "watchdog_check_final_recheck_failed"
 			return
@@ -417,8 +426,13 @@ func runWatchdogUpdate(ctx context.Context, apply bool, open watchdogUpdateOpene
 // Neither the predecessor origin, formal build product nor the resident stop
 // adapter has been issued yet. Do not fill these from installed bytes, a path,
 // JSON, a past clear verdict or the other tool's Guard-target issuer.
-func openNormalWatchdogUpdate(context.Context) (*watchdogUpdateResources, error) {
-	return nil, errWatchdogUnavailable
+func openNormalWatchdogUpdate(ctx context.Context) (*watchdogUpdateResources, error) {
+	product,err:=openNormalWatchdogArtifact(ctx)
+	if err!=nil{
+		if product!=nil{return &watchdogUpdateResources{Files:&watchdogProductFiles{product:product}},err}
+		return nil,err
+	}
+	return openWatchdogUpdateFromProduct(ctx,product)
 }
 
 func watchdogCommand(mode string) int {
@@ -447,4 +461,3 @@ func watchdogCommand(mode string) int {
 	}
 	return 0
 }
-

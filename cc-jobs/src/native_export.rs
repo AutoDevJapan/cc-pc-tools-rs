@@ -8,6 +8,7 @@ use std::{
 };
 
 const DOMAIN: &str = "owned-native-export/1";
+const REGISTRATION_SCHEMA: &str = "owned-native-registration/2";
 const PURPOSE: &str = "p33-skill-business-v11";
 const MAX_STREAM: u64 = 32 << 20;
 const MAX_INPUT: u64 = 2 << 20;
@@ -391,6 +392,27 @@ pub(crate) struct Capture {
     binding:Arc<Mutex<NativeBinding>>,
 }
 pub(crate) struct FinishedExport { job_id:String,generation:String,root:Birth,child:Birth,directory:String,receipt:FileFact,collection:FileFact }
+impl FinishedExport {
+    fn registration(&self)->Value {
+        // The raw receipt keeps its root birth. A normal job snapshot passes
+        // through credential redaction, where a secret literal can rename that
+        // short key. Register the same numeric birth in a closed separate schema.
+        json!({"schema":REGISTRATION_SCHEMA,"domain":DOMAIN,"purpose":PURPOSE,"directory":self.directory,
+            "job_id":self.job_id,"started_at":self.generation,"controller_birth":self.root,
+            "child":self.child,"receipt":self.receipt,"collection":self.collection})
+    }
+}
+fn registered_birth(value:&Value)->bool {
+    value.as_object().is_some_and(|object|object.len()==2&&object.contains_key("pid")&&object.contains_key("created"))&&
+        value["pid"].as_u64().is_some_and(|pid|pid>0&&u32::try_from(pid).is_ok())&&
+        value["created"].as_u64().is_some_and(|created|created>0)
+}
+fn registration_shape(reg:&Value)->bool {
+    const KEYS:[&str;10]=["schema","domain","purpose","directory","job_id","started_at","controller_birth","child","receipt","collection"];
+    reg.as_object().is_some_and(|object|object.len()==KEYS.len()&&KEYS.iter().all(|key|object.contains_key(*key)))&&
+        reg["schema"]==REGISTRATION_SCHEMA&&reg["domain"]==DOMAIN&&reg["purpose"]==PURPOSE&&
+        registered_birth(&reg["controller_birth"])&&registered_birth(&reg["child"])
+}
 
 #[cfg(windows)]
 pub(crate) struct OwnedInputWriter {input:FrozenInput,stdin:CloseOnce<std::process::ChildStdin>}
@@ -671,17 +693,22 @@ impl Context {
         let _lock=self.job_lock(&finished.job_id,"state.lock")?;let mut row=self.load(&finished.job_id)?;
         if s(&row,"started_at")!=finished.generation||row["pid"]!=finished.root.pid||row["pid_created"]!=finished.root.created||
             row["codex_pid"]!=finished.child.pid||row["codex_pid_created"]!=finished.child.created{return Err(Error::new("native export generation changed"));}
-        row["native_export"]=json!({"domain":DOMAIN,"purpose":PURPOSE,"directory":finished.directory,"job_id":finished.job_id,
-            "started_at":finished.generation,"root":finished.root,"child":finished.child,"receipt":finished.receipt,"collection":finished.collection});
-        self.save(&row)
+        let registration=finished.registration();
+        row["native_export"]=registration.clone();
+        self.save(&row)?;
+        // Never report successful publication of a snapshot whose ordinary
+        // persistence/redaction transformed the registered identity or facts.
+        let persisted=self.load(&finished.job_id)?;
+        if persisted["native_export"]!=registration{return Err(Error::new("native export registration readback mismatch"));}
+        Ok(())
     }
     pub(crate) fn select_native_export(&self,jid:&str)->Result<SelectedExport> {
         if !crate::queue::valid_job_id(jid){return Err(Error::new("invalid exact native export job"));}
         qualified_source(self,&self.job_dir(jid))?;
         qualified_source(self,&self.job_dir(jid).join("job.json"))?;
         let _lock=self.job_lock(jid,"state.lock")?;let row=self.load(jid)?;let reg=&row["native_export"];
-        if row["native_evidence_purpose"]!=PURPOSE||reg["domain"]!=DOMAIN||reg["purpose"]!=PURPOSE||reg["job_id"]!=jid||
-            reg["started_at"]!=row["started_at"]||reg["root"]["pid"]!=row["pid"]||reg["root"]["created"]!=row["pid_created"]||
+        if row["native_evidence_purpose"]!=PURPOSE||!registration_shape(reg)||reg["job_id"]!=jid||
+            reg["started_at"]!=row["started_at"]||reg["controller_birth"]["pid"]!=row["pid"]||reg["controller_birth"]["created"]!=row["pid_created"]||
             reg["child"]["pid"]!=row["codex_pid"]||reg["child"]["created"]!=row["codex_pid_created"]{return Err(Error::new("native export origin unavailable"));}
         let name=reg["directory"].as_str().filter(|s|s.starts_with("native-")&&id_ok(s)).ok_or_else(||Error::new("native export namespace unavailable"))?;
         let directory=self.job_dir(jid).join(name);
@@ -712,9 +739,10 @@ fn load_export_component(path:&Path,expected:&Value,limit:u64,phase:&'static str
 // environment values or receipt contents. All six original checks remain exact.
 fn export_attempt_binding_matches(receipt:&Value,reg:&Value,jid:&str)->[bool;6] {
     [receipt["domain"]==DOMAIN,receipt["purpose"]==PURPOSE,receipt["job_id"]==jid,
-        receipt["started_at"]==reg["started_at"],receipt["root"]==reg["root"],receipt["child"]==reg["child"]]
+        receipt["started_at"]==reg["started_at"],receipt["root"]==reg["controller_birth"],receipt["child"]==reg["child"]]
 }
 fn read_export_artifacts(directory:PathBuf,reg:&Value,jid:&str,mut qualify:impl FnMut(&Path)->io::Result<()>)->io::Result<SelectedExport> {
+if !registration_shape(reg){return Err(export_read_failure("receipt","registration_schema_mismatch",None));}
 qualify(&directory.join("export.private.json"))?;
 let receipt=load_export_component(&directory.join("export.private.json"),&reg["receipt"],MAX_RECEIPT,"receipt")?;
 let binding_matches=export_attempt_binding_matches(&receipt,reg,jid);

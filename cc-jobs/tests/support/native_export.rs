@@ -530,8 +530,9 @@ fn thousand_items_finish_and_same_artifact_consumer_remain_readable() {
     {let mut stdout=capture.stdout(Cursor::new(&raw)).unwrap();stdout.read_to_end(&mut Vec::new()).unwrap();}
     {let mut stderr=capture.stderr(Cursor::new(b"")).unwrap();stderr.read_to_end(&mut Vec::new()).unwrap();}
     let finished=capture.finish().unwrap();assert!(finished.receipt.bytes<=MAX_RECEIPT);
-    let reg=json!({"job_id":"job-owned","started_at":"fixture-generation","root":root,"child":child,
-        "receipt":finished.receipt,"collection":finished.collection});
+    let reg=finished.registration();
+    assert_eq!(reg["job_id"],"job-owned");assert_eq!(reg["started_at"],"fixture-generation");
+    assert_eq!(reg["controller_birth"],serde_json::to_value(root).unwrap());assert_eq!(reg["child"],serde_json::to_value(child).unwrap());
     let selected=read_export_artifacts(dir.path().to_path_buf(),&reg,"job-owned",|_|Ok(())).unwrap();
     assert_eq!(selected.binding["item_ids"].as_array().unwrap().len(),1000);
     assert_eq!(selected.metadata()["original_complete"],false);assert_eq!(selected.metadata()["input"]["writer_closed"],"unknown");
@@ -1090,6 +1091,7 @@ impl CaptureFixtureDiagnostic {
                 "native capture not admitted"=>"native_capture_not_admitted",
                 "native launch generation mismatch"=>"native_generation_mismatch",
                 "native export generation changed"=>"native_export_generation_changed",
+                "native export registration readback mismatch"=>"native_registration_readback_mismatch",
                 _=>if error.code==75 {"job_io_temporarily_unavailable"}else{"job_api_failure"},
             };
             self.save();panic!("owned_capture_fixture_api_failed");
@@ -1236,7 +1238,7 @@ fn actual_capture_job_reclaim_retention_and_membership_controls() {
                 });
                 let record=raw.as_deref().and_then(|raw|serde_json::from_slice::<Value>(raw).ok());
                 let phases=["entered","create_capture_job","spawn_suspended_child","pin_same_child_job","observe_launch_membership","publish_rejected_membership_control","close_rejected_control_job","create_owned_job_record","save_owned_running_record","begin_native_capture","owned_input_writer","same_owned_tee_setup","resume_same_child","reclaim_same_job_children","retention_pending_and_drain","wait_same_child","join_raw_readers","join_owned_input","collect_same_job_active_one","finish_original_export","publish_same_generation_export","read_same_export_registration","assert_original_completion","close_controller_capture_job","finished","read_registered_receipt","read_registered_collection","read_registered_binding"];
-                let categories=["none","win32_access_denied","win32_invalid_handle","win32_sharing_violation","win32_invalid_parameter","permission_denied","timed_out","not_found","invalid_data","io_failure","job_api_failure","job_io_temporarily_unavailable","native_input_rejected","native_capture_not_admitted","native_generation_mismatch","native_export_generation_changed","assertion_or_panic","stable_read_failed","fact_encoding_failed","registered_fact_mismatch","strict_json_rejected","attempt_binding_mismatch","receipt_collection_mismatch"];
+                let categories=["none","win32_access_denied","win32_invalid_handle","win32_sharing_violation","win32_invalid_parameter","permission_denied","timed_out","not_found","invalid_data","io_failure","job_api_failure","job_io_temporarily_unavailable","native_input_rejected","native_capture_not_admitted","native_generation_mismatch","native_export_generation_changed","assertion_or_panic","stable_read_failed","fact_encoding_failed","registered_fact_mismatch","strict_json_rejected","attempt_binding_mismatch","receipt_collection_mismatch","registration_schema_mismatch","native_registration_readback_mismatch"];
                 let phase=record.as_ref().map(|r|s(r,"phase")).filter(|p|phases.contains(p)).unwrap_or("unavailable");
                 let category=record.as_ref().map(|r|s(r,"category")).filter(|p|categories.contains(p)).unwrap_or("unavailable");
                 let facts=record.as_ref().map(|r|&r["facts"]);
@@ -1615,7 +1617,8 @@ fn registered_export_binding_roundtrip_rejects_each_field_independently() {
     context.publish_native_export(FinishedExport{job_id:jid.into(),generation:generation.into(),root:root.clone(),child:child.clone(),
         directory:"native-binding-fixture".into(),receipt:receipt_fact,collection:collection_fact}).unwrap();
     let persisted=context.load(jid).unwrap();let reg=&persisted["native_export"];
-    assert_eq!(reg["root"]["created"],root.created);assert_eq!(reg["child"]["created"],child.created);
+    assert_eq!(reg["controller_birth"]["created"],root.created);assert_eq!(reg["child"]["created"],child.created);
+    assert_eq!(reg["schema"],REGISTRATION_SCHEMA);assert!(reg.get("root").is_none());
     let mut reads=Vec::new();
     let selected=read_export_artifacts(path,reg,jid,|path|{reads.push(path.file_name().unwrap().to_str().unwrap().to_string());Ok(())}).unwrap();
     assert_eq!(reads,["export.private.json","collection.private.json","binding.private.json"]);
@@ -1653,4 +1656,89 @@ fn production_origin_deadline_is_not_reset_by_request_preservation() {
     assert_eq!(index["complete"],false);assert_eq!(index["files"][0]["transport"],"failed_or_timeout");
     assert_eq!(index["files"][0]["validation"],"not_attempted");assert!(index["files"][0]["reply"].is_null());
     assert!(!directory.path().join("origin-response-1.jsonl").exists());
+}
+
+#[cfg(windows)]
+struct RegistrationFixtureRuntime {start:std::time::Instant,password:Option<&'static str>}
+#[cfg(windows)]
+impl crate::Runtime for RegistrationFixtureRuntime {
+    fn mono(&self)->f64 {self.start.elapsed().as_secs_f64()}
+    fn env(&self)->std::collections::BTreeMap<String,String> {
+        self.password.map(|value|std::collections::BTreeMap::from([("NATIVE_FIXTURE_PASSWORD".into(),value.into())])).unwrap_or_default()
+    }
+    fn call(&self,_:crate::Call)->io::Result<crate::Reply>{Err(rejected())}
+    fn spawn(&self,_:&crate::Spawn)->io::Result<Box<dyn crate::Running>>{Err(rejected())}
+    fn spawn_supervisor(&self,_:&Path,_:&Path,_:&Path,_:&str)->io::Result<bool>{Err(rejected())}
+}
+#[cfg(windows)]
+fn registration_fixture_context(directory:&Path,password:Option<&'static str>)->Context {
+    Context{root:directory.join("root"),jobs:directory.join("jobs"),home:directory.join("home"),codex_home:directory.join("codex"),
+        gto:directory.join("no-execution"),executable:directory.join("no-launch"),
+        rt:Arc::new(RegistrationFixtureRuntime{start:std::time::Instant::now(),password})}
+}
+#[cfg(windows)]
+fn registration_fixture_export(context:&Context,jid:&str)->(FinishedExport,Value) {
+    let root=Birth{pid:201,created:134000000000000001};let child=Birth{pid:202,created:134000000000000003};
+    let directory=context.job_dir(jid).join("native-binding-fixture");fs::create_dir_all(&directory).unwrap();
+    let binding=save_json(&directory.join("binding.private.json"),&json!({"fixture_only":true}),MAX_BINDING).unwrap();
+    let collection=json!({"fixture_only":true});let collection_fact=save_json(&directory.join("collection.private.json"),&collection,MAX_RECEIPT).unwrap();
+    let receipt=json!({"domain":DOMAIN,"purpose":PURPOSE,"job_id":jid,"started_at":"fixture-generation",
+        "root":root,"child":child,"binding":binding,"collection":collection,"original_complete":false});
+    let receipt_fact=save_json(&directory.join("export.private.json"),&receipt,MAX_RECEIPT).unwrap();
+    let row=json!({"id":jid,"status":"running","native_evidence_purpose":PURPOSE,"started_at":"fixture-generation",
+        "pid":root.pid,"pid_created":root.created,"codex_pid":child.pid,"codex_pid_created":child.created});
+    context.save(&row).unwrap();
+    (FinishedExport{job_id:jid.into(),generation:"fixture-generation".into(),root,child,directory:"native-binding-fixture".into(),receipt:receipt_fact,collection:collection_fact},receipt)
+}
+
+#[cfg(windows)]
+#[test]
+fn normal_registration_survives_root_key_redaction_without_changing_original_receipt() {
+    let directory=tempfile::tempdir().unwrap();let context=registration_fixture_context(directory.path(),Some("root"));
+    let jid="redactor-binding-fixture";let (finished,receipt)=registration_fixture_export(&context,jid);
+    let path=context.job_dir(jid).join("native-binding-fixture");let before=fs::read(path.join("export.private.json")).unwrap();
+    // This is a declared test-only secret literal. No real environment is read.
+    let masked=crate::LogRedactor::new(&context.rt.env()).event(&json!({"root":receipt["root"],"message":"root","credential_password":"fixture-secret-value"}));
+    assert!(masked.get("root").is_none());assert_eq!(masked["message"],cc_redact::MARK);
+    assert_eq!(masked["credential_password"],cc_redact::MARK);
+    context.publish_native_export(finished).unwrap();
+    let persisted=context.load(jid).unwrap();let reg=&persisted["native_export"];
+    assert!(registration_shape(reg));assert_eq!(reg["controller_birth"],receipt["root"]);
+    assert!(reg.get("root").is_none());assert_eq!(reg["child"],receipt["child"]);
+    let selected=read_export_artifacts(path.clone(),reg,jid,|_|Ok(())).unwrap();
+    assert_eq!(selected.metadata(),&receipt);assert_eq!(fs::read(path.join("export.private.json")).unwrap(),before);
+    assert_eq!(export_attempt_binding_matches(selected.metadata(),reg,jid),[true;6]);
+    assert_eq!(selected.metadata()["original_complete"],false);
+    for mode in ["legacy_root","masked_key","alias","bad_schema","missing_controller","null_controller","invalid_pid","zero_birth","extra_birth_key"] {
+        let mut rejected_reg=reg.clone();let object=rejected_reg.as_object_mut().unwrap();
+        match mode {
+            "legacy_root"=>{let value=object.remove("controller_birth").unwrap();object.remove("schema");object.insert("root".into(),value);},
+            "masked_key"=>{let value=object.remove("controller_birth").unwrap();object.insert(cc_redact::MARK.into(),value);},
+            "alias"=>{object.insert("root".into(),receipt["root"].clone());},
+            "bad_schema"=>{object.insert("schema".into(),json!("unknown"));},
+            "null_controller"=>{object.insert("controller_birth".into(),Value::Null);},
+            "invalid_pid"=>{object.get_mut("controller_birth").unwrap()["pid"]=json!(4294967296u64);},
+            "zero_birth"=>{object.get_mut("controller_birth").unwrap()["created"]=json!(0);},
+            "extra_birth_key"=>{object.get_mut("controller_birth").unwrap()["unobserved"]=json!(true);},
+            _=>{object.remove("controller_birth");},
+        }
+        let mut reads=0;let result=read_export_artifacts(path.clone(),&rejected_reg,jid,|_|{reads+=1;Ok(())});
+        let error=match result{Ok(_)=>panic!("invalid_registration_accepted"),Err(error)=>error};
+        let failure=error.get_ref().and_then(|error|error.downcast_ref::<ExportReadFailure>()).unwrap();
+        assert_eq!(failure.category,"registration_schema_mismatch","{mode}");assert_eq!(reads,0,"{mode}");
+    }
+}
+
+#[cfg(windows)]
+#[test]
+fn changed_registration_readback_is_failure_and_never_rolls_back_other_state() {
+    let directory=tempfile::tempdir().unwrap();let context=registration_fixture_context(directory.path(),Some("controller_birth"));
+    let jid="redactor-readback-fixture";let (finished,receipt)=registration_fixture_export(&context,jid);
+    let path=context.job_dir(jid).join("native-binding-fixture");let before=fs::read(path.join("export.private.json")).unwrap();
+    let error=context.publish_native_export(finished).unwrap_err();assert_eq!(error.message,"native export registration readback mismatch");
+    let persisted=context.load(jid).unwrap();assert_eq!(persisted["status"],"running");assert_eq!(persisted["started_at"],"fixture-generation");
+    assert!(!registration_shape(&persisted["native_export"]));
+    assert_eq!(persisted["native_export"][cc_redact::MARK],receipt["root"]);
+    assert_eq!(fs::read(path.join("export.private.json")).unwrap(),before);
+    assert!(path.join("collection.private.json").is_file());assert!(path.join("binding.private.json").is_file());
 }

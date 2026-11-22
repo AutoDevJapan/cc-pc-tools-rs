@@ -390,3 +390,28 @@ still rejects without sending or preserving a reply. Late replies remain raw
 artifacts with complete=false. A same-registration roundtrip through the normal
 job save/load route and independent single-field negatives cover the actual
 artifact-consumer comparison, without issuing a launch or origin capability.
+
+## Internal controller registration
+
+The raw export receipt remains owned-native-export/1 and keeps its original root
+and child birth observations. The job.json registration is separately versioned
+as owned-native-registration/2. It binds that same numeric root observation as
+controller_birth, with the same child, job ID, generation and exact receipt and
+collection FileFacts. The six receipt comparisons retain their original meaning;
+no root is inferred from a path, another attempt or a masked field.
+
+Ordinary job snapshots are credential-redacted before serialization. A configured
+secret literal can also rename an equal object key. The short root key therefore
+cannot serve as the internal registration field across that transformation.
+The registration uses a closed field set, and publication reads back the saved
+registration under the existing state lock before reporting success. A changed
+registration, unknown schema, old root-key registration or masked alias rejects.
+There is no legacy/masked-key fallback and no general redaction exception.
+
+A failed save/readback may leave the actual job snapshot and raw evidence on
+disk; it does not roll back unrelated state, delete evidence, change business
+failure into success or issue a runtime capability. The same source tests require
+the unchanged actual owned-Job controls plus synthetic credential-value collisions
+at the real normal save/load boundary. Synthetic numeric births are artifact-only
+fixtures and do not qualify an actual process. Local source preparation is distinct
+from hosted compilation and OS acceptance.

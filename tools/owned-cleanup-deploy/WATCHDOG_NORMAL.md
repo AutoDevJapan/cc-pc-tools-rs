@@ -136,3 +136,14 @@ append/overwrite race or incomplete event line also waits; raw data is not accep
 until a complete stable snapshot is obtained. Any cleanup failure stays terminal.
 The executable/artifact/current-purpose pin contract is unchanged. Native Task
 startup and the normal artifact/origin/lifetime issuers remain unaccepted.
+
+
+Event snapshot readiness does not pause health observation after the initial
+six samples. Every subsequent retry checks a current same-generation status;
+health, PID, time, write-failure and health_only predicates remain required.
+After events are ready, Observe rechecks the same Task instance, process,
+candidate and a newly read current status before returning success. The fixed
+six-sample evidence keeps its first samples and advances its final sample to a
+newer valid observation, preserving the original 50-second span and 150-second
+overall bound. A known unhealthy, stale, foreign-PID or write-failed current
+status fails immediately, even when the event snapshot later becomes complete.

@@ -469,6 +469,18 @@ func(r *watchdogResidentNative) observeWith(ctx context.Context,id watchdogFileI
 	pause:=func(d time.Duration)error{if e:=check();e!=nil{return e};left:=deadline.Sub(ops.now());if d>left{d=left};if e:=ops.pause(c,d);e!=nil{return e};return check()}
 	var generation watchdogObserveGeneration
 	var current *watchdogProcess
+	checkSample:=func(s watchdogSample)error{
+		// An unchanged predecessor status may precede the first new sample only.
+		if len(result.Samples)==0&&s.WatchdogPID==r.previousPID&&!s.At.After(r.published)&&s.At.Before(result.Started){return watchdogObservationPending("predecessor_status")}
+		if s.WatchdogPID!=current.pid||s.At.Before(result.Started)||ops.now().Sub(s.At)>25*time.Second||s.At.After(ops.now().Add(2*time.Second)){return errors.New("watchdog_observation_stale")}
+		if !s.Healthy||s.ObservationKind!="health_only"||s.IdentityPresent||s.MetricsPresent||s.Eligible||s.Failures!=0||s.ErrorPresent||s.WriteFailures!=0{return errors.New("watchdog_health_only_acceptance_failed")}
+		last:=len(result.Samples)-1
+		if last>=0&&s.At.Before(result.Samples[last].At){return errors.New("watchdog_observation_stale")}
+		if last<0||s.At.After(result.Samples[last].At){
+			if len(result.Samples)<6{result.Samples=append(result.Samples,s)}else{result.Samples[last]=s}
+		}
+		return nil
+	}
 	for{
 		if e:=check();e!=nil{return result,e}
 		snapshot,e:=ops.task(c);if e!=nil{return result,e}
@@ -493,27 +505,27 @@ func(r *watchdogResidentNative) observeWith(ctx context.Context,id watchdogFileI
 			result.OwnImage=id;result.OwnInstanceVerified=true
 		}
 		if e=ops.checkProcess(current);e!=nil{return result,e}
-		if len(result.Samples)<6{
-			s,e:=ops.sample(c)
-			if e!=nil{if watchdogObservationRetry(e){if e=pause(250*time.Millisecond);e!=nil{return result,e};continue};return result,e}
-			if e=check();e!=nil{return result,e}
-			// Only an unchanged predecessor observation before the first new sample
-			// is a startup wait. Other PIDs, future/stale current data are contradictions.
-			if len(result.Samples)==0&&s.WatchdogPID==r.previousPID&&!s.At.After(r.published)&&s.At.Before(result.Started){
-				if e=pause(250*time.Millisecond);e!=nil{return result,e};continue
-			}
-			if s.WatchdogPID!=current.pid||s.At.Before(result.Started)||ops.now().Sub(s.At)>25*time.Second||s.At.After(ops.now().Add(2*time.Second)){
-				return result,errors.New("watchdog_observation_stale")
-			}
-			if !s.Healthy||s.ObservationKind!="health_only"||s.IdentityPresent||s.MetricsPresent||s.Eligible||s.Failures!=0||s.ErrorPresent||s.WriteFailures!=0{return result,errors.New("watchdog_health_only_acceptance_failed")}
-			if len(result.Samples)>0&&s.At.Before(result.Samples[len(result.Samples)-1].At){return result,errors.New("watchdog_observation_stale")}
-			if len(result.Samples)==0||s.At.After(result.Samples[len(result.Samples)-1].At){result.Samples=append(result.Samples,s)}
-			if len(result.Samples)<6{if e=pause(time.Second);e!=nil{return result,e};continue}
-		}
+		// Continue observing current health even after the initial six samples.
+		s,e:=ops.sample(c)
+		if e!=nil{if watchdogObservationRetry(e){if e=pause(250*time.Millisecond);e!=nil{return result,e};continue};return result,e}
+		if e=check();e!=nil{return result,e}
+		if e=checkSample(s);e!=nil{if watchdogObservationRetry(e){if e=pause(250*time.Millisecond);e!=nil{return result,e};continue};return result,e}
+		if len(result.Samples)<6{if e=pause(time.Second);e!=nil{return result,e};continue}
 		if e=ops.events(c,r.published,current.pid);e!=nil{
 			if watchdogObservationRetry(e){if e=pause(250*time.Millisecond);e!=nil{return result,e};continue};return result,e
 		}
+		// Event acquisition may block or have retried. Bind acceptance to the
+		// same Task/process and a fresh status read after the events are ready.
+		snapshot,e=ops.task(c);if e!=nil{return result,e}
+		if e=generation.instance(snapshot,r.task);e!=nil{return result,e}
 		if e=check();e!=nil{return result,e}
+		s,e=ops.sample(c)
+		if e!=nil{if watchdogObservationRetry(e){if e=pause(250*time.Millisecond);e!=nil{return result,e};continue};return result,e}
+		if e=check();e!=nil{return result,e}
+		if e=checkSample(s);e!=nil{return result,e}
+		if e=ops.checkProcess(current);e!=nil{return result,e}
+		if e=check();e!=nil{return result,e}
+		if ops.now().Sub(s.At)>25*time.Second{return result,errors.New("watchdog_observation_stale")}
 		if !result.valid(id){return result,errors.New("watchdog_health_only_acceptance_failed")}
 		return result,nil
 	}

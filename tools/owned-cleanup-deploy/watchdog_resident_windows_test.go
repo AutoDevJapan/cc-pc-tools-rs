@@ -251,7 +251,7 @@ func(f *watchdogObserveFixture) sample(context.Context)(watchdogSample,error){
 	if (f.kind=="mutable"||f.kind=="rename")&&f.pending(f.samples){return watchdogSample{},watchdogObservationPending("mutable_snapshot_raced")}
 	if (f.kind=="mutable"||f.kind=="rename")&&f.mode=="foreign"&&f.samples>1{return watchdogSample{},errors.New("foreign_metadata")}
 	at:=f.now
-	if f.samples>1{f.now=f.now.Add(9*time.Second);at=f.now}
+	if f.samples>1&&f.events==0{f.now=f.now.Add(9*time.Second);at=f.now}
 	pid:=uint32(5313);if f.kind=="chain-reduced"{pid=5314};if f.kind=="old-status"&&f.mode=="foreign"&&f.samples>1||f.kind=="sample-pid"{pid=9999}
 	s:=watchdogSample{At:at,WatchdogPID:pid,Healthy:true,ObservationKind:"health_only"}
 	if f.kind=="health"{s.Healthy=false}
@@ -321,7 +321,7 @@ func TestWatchdogObservationMutableRacesAreTypedAndCleanupIsNeverRetried(t *test
 		t.Run(kind,func(t *testing.T){
 			raw:=[]byte("{}\n");if kind=="append"{raw=[]byte("{}")};v,_:=watchdogMutableFixture(t,raw);path:=watchdogEventsPath
 			if kind=="foreign-path"{path=watchdogTarget}
-			if kind=="close-error"{v.closeFailAt=0}
+			if kind=="close-error"{v.closeFailAt=1}
 			if kind=="rotation"{base:=v.scope.ops.create;v.scope.ops.create=func(p string,a,b,c uint32)(*os.File,error){f,e:=base(p,a,b,c);if f!=nil&&a==0x80&&b==7{i:=v.info[f];i.FileIndexLow++;v.info[f]=i};return f,e}}
 			calls:=0;value,e:=watchdogReadObservationMutableWith(v.scope,path,8192,func(f *os.File,n int64)([]byte,error){
 				calls++;got:=append([]byte(nil),raw...);i:=v.info[f]
@@ -331,8 +331,14 @@ func TestWatchdogObservationMutableRacesAreTypedAndCleanupIsNeverRetried(t *test
 			})
 			transient:=kind=="append"||kind=="rotation"||kind=="bytes"
 			if kind=="normal"||kind=="close-error"{if e!=nil||string(value)!=string(raw){t.Fatal("normal snapshot",e)}}else if e==nil||watchdogObservationRetry(e)!=transient{t.Fatal("readiness error classification",e)}
-			cleanup:=v.scope.Close();if (cleanup!=nil)!=(kind=="close-error"){t.Fatal("cleanup counter not exercised",cleanup)};if cleanup!=nil{e=errors.Join(errors.New("cleanup"),e,cleanup);if watchdogObservationRetry(e){t.Fatal("cleanup became transient")}}
-			_ = v.scope.Close();for _,f:=range v.files{if v.counts[f]!=1{t.Fatal("read pin Close retried")}}
+			cleanup:=v.scope.Close();if (cleanup!=nil)!=(kind=="close-error"){t.Fatal("cleanup counter not exercised",cleanup)}
+			if kind=="close-error"{
+				if !errors.Is(cleanup,v.cleanup)||v.counts[v.files[0]]!=1{t.Fatal("intended cleanup fault not exercised",cleanup)}
+				if watchdogObservationRetry(errors.Join(watchdogObservationPending("fixture_race"),cleanup)){t.Fatal("pending plus cleanup became transient")}
+			}
+			if cleanup!=nil{e=errors.Join(errors.New("cleanup"),e,cleanup);if watchdogObservationRetry(e){t.Fatal("cleanup became transient")}}
+			again:=v.scope.Close();if kind=="close-error"&&!errors.Is(again,v.cleanup){t.Fatal("cached cleanup fault lost",again)}
+			for _,f:=range v.files{if v.counts[f]!=1{t.Fatal("read pin Close retried")}}
 		})
 	}
 }
@@ -350,6 +356,70 @@ func TestWatchdogUpdateDoesNotRollbackWhileObservationIsStillNotReady(t *testing
 				if !result.Qualified||!result.ObservationAccepted||result.RollbackAttempted||strings.Contains(strings.Join(files.calls,","),"rollback"){t.Fatal("not-ready forced rollback",result)}
 			}else if result.Qualified||result.Reason!="watchdog_postpublish_observation_failed"||!result.RollbackAttempted||!result.RollbackSucceeded{t.Fatal("finite deadline did not use existing recovery",result)}
 			if f.pauses==0||resident.closeCount!=1||files.closeCount!=1{t.Fatal("same consumer not exercised")}
+			f.assertClosedOnce(t)
+		})
+	}
+}
+
+// After the initial six samples, event readiness must not suspend current-health
+// checks. The same Observe and update consumer are used; no Task/host is started.
+func watchdogEventHealthFixture(t *testing.T,mode string)*watchdogObserveFixture{
+	t.Helper();f:=watchdogObserveFixtureNew(t,"event-health","progress")
+	baseSample:=f.r.observation.sample
+	f.r.observation.events=func(context.Context,time.Time,uint32)error{
+		f.events++
+		if mode=="post-event"{return nil}
+		if f.events==1||mode=="deadline"{
+			if f.events==1{f.now=f.now.Add(40*time.Second)}
+			return watchdogObservationPending("events_appending")
+		}
+		return nil
+	}
+	f.r.observation.sample=func(ctx context.Context)(watchdogSample,error){
+		s,e:=baseSample(ctx);if e!=nil{return s,e}
+		if f.events>0{
+			switch mode{
+			case "unhealthy","post-event":s.Healthy=false
+			case "write-failed":s.WriteFailures=1
+			case "foreign-pid":s.WatchdogPID=9999
+			case "stale":s.At=f.r.published.Add(52*time.Second)
+			case "malformed":return watchdogSample{},errors.New("watchdog_status_schema")
+			case "sample-pending":if f.events==1&&f.samples==7{return watchdogSample{},watchdogObservationPending("mutable_snapshot_raced")}
+			}
+		}
+		return s,nil
+	}
+	return f
+}
+func TestWatchdogObserveRechecksHealthAcrossEventPendingAndAfterEventRead(t *testing.T){
+	for _,mode:=range []string{"healthy","sample-pending","unhealthy","write-failed","foreign-pid","stale","malformed","post-event","deadline"}{
+		t.Run(mode,func(t *testing.T){
+			f:=watchdogEventHealthFixture(t,mode)
+			result,e:=f.r.Observe(context.Background(),watchdogTestID())
+			good:=mode=="healthy"||mode=="sample-pending"
+			if good{
+				if e!=nil||!result.valid(watchdogTestID())||f.events!=2||f.samples<8||f.now.Sub(result.Samples[len(result.Samples)-1].At)>25*time.Second{t.Fatal("event convergence lost current health",mode,result,e)}
+			}else{
+				if e==nil||watchdogObservationRetry(e){t.Fatal("old healthy samples authorized acceptance",mode,result,e)}
+				if (mode=="deadline")!=errors.Is(e,context.DeadlineExceeded){t.Fatal("foreign health was retried/deadline lost",mode,e)}
+				if mode!="deadline"&&f.events!=1{t.Fatal("health contradiction was not immediate",f.events)}
+			}
+			if f.samples<=6{t.Fatal("current sample was not reacquired after six",f.samples)}
+			if f.now.Sub(f.r.published)>152*time.Second{t.Fatal("event retry extended overall deadline")}
+			f.assertClosedOnce(t)
+		})
+	}
+}
+func TestWatchdogUpdateRejectsHealthLostWhileWaitingForEvents(t *testing.T){
+	for _,mode:=range []string{"healthy","unhealthy","write-failed","foreign-pid","stale","post-event"}{
+		t.Run(mode,func(t *testing.T){
+			f:=watchdogEventHealthFixture(t,mode);all,files,resident:=watchdogTestResources();resident.task=f.r.task.View
+			all.Resident=&watchdogObserveUpdateFixture{watchdogTestResident:resident,native:f.r}
+			result:=runWatchdogUpdate(context.Background(),true,func(context.Context)(*watchdogUpdateResources,error){return all,nil})
+			if mode=="healthy"{
+				if !result.Qualified||!result.ObservationAccepted||result.RollbackAttempted{t.Fatal("healthy delayed events refused",result)}
+			}else if result.Qualified||result.ObservationAccepted||!result.RollbackAttempted||!result.RollbackSucceeded||result.Reason!="watchdog_postpublish_observation_failed"{t.Fatal("event ready hid health failure",mode,result)}
+			if f.samples<=6||files.closeCount!=1||resident.closeCount!=1{t.Fatal("same consumer or final health was skipped")}
 			f.assertClosedOnce(t)
 		})
 	}

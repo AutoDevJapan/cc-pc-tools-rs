@@ -605,7 +605,7 @@ impl<R> Drop for OriginalStream<R> {
         if let Some(file)=self.file.take() {
             let mut file=file;
             let sync=file.get().and_then(File::sync_all);
-            if finish_owned(&mut file,sync).is_err(){if let Ok(mut s)=self.state.lock(){s.persisted=Observed::Failed;}}
+            if finish_owned(&mut file,sync).is_err()&&let Ok(mut s)=self.state.lock(){s.persisted=Observed::Failed;}
             // Dropping before EOF leaves eof=unknown, even if the child exited0.
         }
     }
@@ -1823,7 +1823,7 @@ pub(crate) fn drain_retained_attempts(context:&Context,jid:&str) {
         }
         let mut failed=false;
         for reader in attempt.readers.drain(..){if reader.join().is_err(){failed=true;}}
-        if let Some(input)=attempt.input.take(){if !matches!(input.join(),Ok(Ok(()))){failed=true;}}
+        if let Some(input)=attempt.input.take()&&!matches!(input.join(),Ok(Ok(()))){failed=true;}
         #[cfg(windows)] if attempt.process.close_owned_process().is_err(){failed=true;}
         if let Some(capture)=attempt.capture.take(){
             match capture.finish(){Ok(finished)=>{if context.publish_native_export(finished).is_err(){failed=true;}},Err(_)=>failed=true}

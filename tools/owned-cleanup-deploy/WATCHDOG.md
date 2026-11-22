@@ -115,6 +115,10 @@ establish installed success or a runtime grant.
 OpenCodex's representative CLI acceptance from Codex and Claude Code requires
 normal qualification of the actual nested Bun. HTTP 200 is recorded separately.
 
+The [normal distribution resources](WATCHDOG_NORMAL.md) describe the live
+artifact/purpose boundary and fixed resident adapter. The normal issuers remain
+unavailable until those resources are genuinely issued.
+
 References:
 
 - [Cargo JSON messages](https://doc.rust-lang.org/cargo/reference/external-tools.html#json-messages)

@@ -280,9 +280,8 @@ fn fatal_read_failure_is_sticky_but_interrupted_is_retried() {
         if fatal {
             assert!(stream.read(&mut buf).is_err());assert!(stream.read(&mut buf).is_err());
             assert_eq!(stream.input.step,2);assert_eq!(state.lock().unwrap().eof,Observed::Failed);
-            let output=state.lock().unwrap().clone();let mut input=StreamState::default();
-            input.bytes=1;input.flushed=Observed::Confirmed;input.writer_closed=Observed::Confirmed;
-            let mut err=StreamState::default();err.eof=Observed::Confirmed;
+            let output=state.lock().unwrap().clone();let input=StreamState{bytes:1,flushed:Observed::Confirmed,writer_closed:Observed::Confirmed,..StreamState::default()};
+            let err=StreamState{eof:Observed::Confirmed,..StreamState::default()};
             assert!(!streams_complete(&input,1,&output,&err,true,0));
         }else{assert_eq!(stream.read(&mut buf).unwrap(),0);assert_eq!(state.lock().unwrap().eof,Observed::Confirmed);}
     }
@@ -519,7 +518,7 @@ fn thousand_items_finish_and_same_artifact_consumer_remain_readable() {
     let processes=native::Processes::borrowed_actual_child_for_fixture(owned.child.as_handle()).unwrap();
     let root=processes.root();let child=processes.child();
     let prompt=save_new(&dir.path().join("prompt.as-sent.utf8"),b"test-owned prompt").unwrap();
-    let mut input=StreamState::default();input.bytes=prompt.bytes;input.flushed=Observed::Confirmed;
+    let input=StreamState{bytes:prompt.bytes,flushed:Observed::Confirmed,..StreamState::default()};
     // No actual stdin was sent by this parser/capacity fixture. Keep it unknown.
     let capture=Capture{job_id:"job-owned".into(),generation:"fixture-generation".into(),directory:dir.path().to_path_buf(),
         root:root.clone(),child:child.clone(),fresh_launch:true,processes,prompt,wait:WaitFact{called:false,reaped:Observed::Unknown,exit_code:None},
@@ -755,7 +754,7 @@ fn actual_saved_prompt_fact_is_required_for_persisted_input() {
     let processes=native::Processes::pin(owned.child.as_handle(),None).unwrap();
     let frozen=frozen_saved_input(bytes,&saved).unwrap();let state=frozen.state.clone();
     frozen.write_to_child(&mut owned.child,&processes).unwrap();
-    let mut stdout=StreamState::default();stdout.eof=Observed::Confirmed;stdout.persisted=Observed::Confirmed;
+    let stdout=StreamState{eof:Observed::Confirmed,persisted:Observed::Confirmed,..StreamState::default()};
     let stderr=stdout.clone();
     assert!(streams_complete(&state.lock().unwrap(),bytes.len() as u64,&stdout,&stderr,true,0));
     let until=std::time::Instant::now()+std::time::Duration::from_secs(3);
@@ -859,7 +858,7 @@ fn bounded_enqueue_still_refuses_expiry_and_disconnect() {
 }
 #[test]
 fn readonly_query_latest_and_sticky_failure_have_separate_meaning() {
-    let mut facts=OriginFacts::default();facts.child_wait=true;facts.exit_code=Some(0);
+    let mut facts=OriginFacts{child_wait:true,exit_code:Some(0),..OriginFacts::default()};
     facts.job_query(Ok(0));assert!(!facts.collected(false));assert!(facts.collected(true));assert!(facts.unforced_success());
     facts.job_query(Err(rejected()));assert_eq!(facts.job_active,None);assert_eq!(facts.last_observed_job_active,Some(0));
     assert!(!facts.latest_job_query_succeeded);assert!(facts.job_query_failed);assert!(!facts.collected(true));assert!(!facts.unforced_success());
@@ -869,14 +868,14 @@ fn readonly_query_latest_and_sticky_failure_have_separate_meaning() {
 #[test]
 fn failed_or_accepted_stop_attempt_is_never_natural_success() {
     for child_stop in [false,true]{for accepted in [false,true]{
-        let mut facts=OriginFacts::default();facts.child_wait=true;facts.exit_code=Some(0);facts.job_query(Ok(0));
+        let mut facts=OriginFacts{child_wait:true,exit_code:Some(0),..OriginFacts::default()};facts.job_query(Ok(0));
         let target=if child_stop{&mut facts.child_terminate}else{&mut facts.job_terminate};
         target.call(|_|if accepted{Ok(())}else{Err(rejected())});
         assert!(target.attempted);assert_eq!(target.accepted,accepted);assert_eq!(target.failed,!accepted);
         assert!(facts.collected(true));assert!(!facts.unforced_success());
         facts.child_wait=false;assert!(!facts.collected(true));
     }}
-    let mut normal=OriginFacts::default();normal.child_wait=true;normal.exit_code=Some(0);normal.job_query(Ok(0));
+    let mut normal=OriginFacts{child_wait:true,exit_code:Some(0),..OriginFacts::default()};normal.job_query(Ok(0));
     assert!(normal.unforced_success());normal.thread_error=true;assert!(!normal.unforced_success());
 }
 #[test]
@@ -909,7 +908,7 @@ fn collection_observer_failure_does_not_drop_the_pending_owner() {
 fn early_error_progress_completion_is_joined_without_restarting_worker() {
     struct Guard<'a>{attempts:&'a std::cell::Cell<usize>}
     impl Drop for Guard<'_>{fn drop(&mut self){completion_barrier(||{let n=self.attempts.get()+1;self.attempts.set(n);n==3});}}
-    let count=std::cell::Cell::new(0);let result=(||->io::Result<()>{let _guard=Guard{attempts:&count};Err(rejected())})();
+    let count=std::cell::Cell::new(0);let result:io::Result<()>={let _guard=Guard{attempts:&count};Err(rejected())};
     assert!(result.is_err());assert_eq!(count.get(),3);
     let mut normal=0;completion_barrier(||{normal+=1;true});assert_eq!(normal,1);
 }
@@ -979,11 +978,11 @@ fn actual_readonly_owner_barrier_collects_normal_and_delayed_pipe() {
 #[test]
 fn actual_progress_guard_closes_on_early_error_without_worker_restart() {
     let dir=tempfile::tempdir().unwrap();let rt:crate::SharedRuntime=Arc::new(crate::System::default());
-    let result=(||->io::Result<()>{
+    let result:io::Result<()>={
         let mut progress=ProgressOwner::new(crate::notify::TaskProgress::new(None,dir.path().to_path_buf(),rt),true);
         progress.start(&json!({"id":"fixture-progress"}));assert!(!progress.closed);
         Err(rejected())
-    })();
+    };
     assert!(result.is_err());
     // None means no notification child or network call. Partial-close ordering
     // is exercised separately by completion_barrier's finite callback seam.
@@ -995,7 +994,7 @@ fn stop_attempt_fact_exists_before_the_native_callback_returns() {
     fact.call(|during|{assert!(during.attempted);assert!(!during.accepted&&!during.failed);called.set(true);Err(io::Error::new(io::ErrorKind::PermissionDenied,"fixed_failure"))});
     assert!(called.get());assert!(fact.attempted&&fact.failed&&!fact.accepted);
     fact.call(|_|Ok(()));assert!(fact.attempted&&fact.accepted&&fact.failed);
-    let mut state=OriginFacts::default();state.child_wait=true;state.exit_code=Some(0);state.job_query(Ok(0));
+    let mut state=OriginFacts{child_wait:true,exit_code:Some(0),..OriginFacts::default()};state.job_query(Ok(0));
     state.job_terminate=fact;assert!(state.collected(true));assert!(!state.unforced_success());
 }
 
@@ -1328,7 +1327,7 @@ fn progress_owner_drop_waits_for_real_worker_before_returning_failed_business() 
     ready_rx.recv_timeout(std::time::Duration::from_secs(3)).unwrap();
     let (attempt_tx,attempt_rx)=std::sync::mpsc::sync_channel(1);let (returned_tx,returned_rx)=std::sync::mpsc::sync_channel(1);
     let worker=std::thread::Builder::new().spawn(move || {
-        let result=(||->io::Result<()> {let mut owner=ProgressOwner::new(task,true);assert!(!owner.close());attempt_tx.send(()).unwrap();Err(rejected())})();
+        let result:io::Result<()>={let mut owner=ProgressOwner::new(task,true);assert!(!owner.close());attempt_tx.send(()).unwrap();Err(rejected())};
         returned_tx.send(result.is_err()).unwrap();
     }).unwrap();
     attempt_rx.recv_timeout(std::time::Duration::from_secs(3)).unwrap();assert!(returned_rx.try_recv().is_err());

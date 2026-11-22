@@ -1470,7 +1470,8 @@ mod native {
         if !delay_pipe{
             let until=std::time::Instant::now()+std::time::Duration::from_secs(5);
             loop{let done=state.child.try_wait()?.is_some()&&state.stdout.as_ref().is_some_and(std::thread::JoinHandle::is_finished)&&state.stderr.as_ref().is_some_and(std::thread::JoinHandle::is_finished);
-                if done{break;}if std::time::Instant::now()>=until{return Err(rejected());}std::thread::yield_now();}
+                if done{break;}
+                if std::time::Instant::now()>=until{return Err(rejected());}std::thread::yield_now();}
         }
         let state=owner.owned.take().ok_or_else(rejected)?;let mut first=true;
         let (receipt,deferred)=drive_owned_collection(state,|state|{

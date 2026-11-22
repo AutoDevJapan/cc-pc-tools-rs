@@ -10,6 +10,9 @@ import (
 	"encoding/hex"
 	"strings"
 	"testing"
+	"time"
+	"runtime"
+	"os"
 )
 
 func watchdogTaskFixtureJSON()map[string]any{
@@ -179,6 +182,175 @@ func TestWatchdogCheckOnlyFinalTaskCancellationCannotQualify(t *testing.T){
 			if !good&&(result.Reason!="watchdog_check_final_recheck_failed"||ctx.Err()!=context.Canceled||result.TaskUnchanged){t.Fatal("final cancellation became success",result)}
 			if files.closeCount!=1||resident.closeCount!=1{t.Fatal("acquired resources not closed once")}
 			if result.CleanupFailed!=(kind=="cancel-and-close-failure"){t.Fatal("primary/cleanup facts mixed",result)}
+		})
+	}
+}
+
+// The same Observe consumer runs with controlled Task/chain/status/event seams.
+// Only GetCurrentThreadId is native metadata; no Task, process or service starts.
+type watchdogObserveFixture struct{
+	r *watchdogResidentNative
+	now time.Time
+	kind,mode string
+	tasks,chains,samples,events,pauses,images int
+	acquired []*watchdogProcess
+	closed map[*watchdogProcess]int
+	owner *watchdogLifetimeFixture
+	cancel context.CancelFunc
+	closeFail bool
+}
+func watchdogObserveFixtureNew(t *testing.T,kind,mode string)*watchdogObserveFixture{
+	t.Helper();published:=time.Date(2026,1,1,0,0,0,0,time.UTC)
+	var original watchdogTaskSnapshot
+	raw,_:=json.Marshal(watchdogTaskFixtureJSON());var e error;original,e=decodeWatchdogTask(raw);if e!=nil{t.Fatal(e)}
+	original.Instances[0].PID=1111
+	id:=watchdogTestID();owner:=&watchdogLifetimeFixture{}
+	r:=&watchdogResidentNative{task:original,previousPID:11,published:published,candidate:func()watchdogFileIdentity{return id},lifetime:owner,pins:newWatchdogPinScope()}
+	r.collection.begin(true);r.collection.confirm()
+	f:=&watchdogObserveFixture{r:r,now:published.Add(2*time.Second),kind:kind,mode:mode,closed:map[*watchdogProcess]int{},owner:owner}
+	r.observation=&watchdogObservationOps{task:f.task,chain:f.chain,closeChain:f.closeChain,checkProcess:func(p *watchdogProcess)error{if p.closed{return errors.New("changed")};return nil},
+		image:func(context.Context,watchdogFileIdentity)error{f.images++;if kind=="image"{return errors.New("image_changed")};return nil},sample:f.sample,events:f.eventRead,now:func()time.Time{return f.now},pause:f.pause}
+	runtime.LockOSThread();r.threadPinned=true
+	thread,_,_:=kernel.NewProc("GetCurrentThreadId").Call();r.threadID=uint32(thread)
+	t.Cleanup(func(){_ = r.Close()})
+	return f
+}
+func(f *watchdogObserveFixture) pending(n int)bool{return f.mode=="deadline"||n==1}
+func(f *watchdogObserveFixture) task(context.Context)(watchdogTaskSnapshot,error){
+	f.tasks++;v:=watchdogTaskFixtureJSON();i:=v["instances"].([]any)[0].(map[string]any)
+	i["guid"]="{5AB9BD54-AC1C-494C-9B08-9EE212A74F3E}";i["pid"]=5312
+	if f.kind=="queued"&&f.pending(f.tasks){i["state"]=2;i["pid"]=0;i["action"]=""}
+	if f.kind=="pid-pending"&&f.pending(f.tasks){i["pid"]=0}
+	if f.kind=="action-pending"&&f.pending(f.tasks){i["action"]=""}
+	if (f.kind=="queued"||f.kind=="pid-pending"||f.kind=="action-pending")&&f.mode=="foreign"&&f.tasks>1{i["action"]="D:/foreign.exe"}
+	if f.kind=="definition"{v["arguments"]="foreign"}
+	if f.kind=="instance-pid"&&f.tasks>1{i["pid"]=5412}
+	if f.kind=="instance-guid"&&f.tasks>1{i["guid"]="{6AB9BD54-AC1C-494C-9B08-9EE212A74F3E}"}
+	if f.kind=="ready-to-queued"&&f.tasks>1{i["state"]=2}
+	if f.kind=="unknown-task"{return watchdogTaskSnapshot{},errors.New("unknown_task_error")}
+	raw,_:=json.Marshal(v);return decodeWatchdogObservationTask(raw)
+}
+func(f *watchdogObserveFixture) chain(i watchdogTaskInstance,principal string)([]*watchdogProcess,error){
+	f.chains++;count:=2;if f.kind=="chain-reduced"{count=3};instance,rows,processes:=watchdogChainFixture(count);instance.GUID=i.GUID
+	for depth:=0;depth<count;depth++{processes[uint32(5312+depth)].created=uint64(f.r.published.Unix()+11644473600)*10000000+10000000+uint64(depth)}
+	if (f.kind=="chain"||f.kind=="chain-reduced"||f.kind=="prefix-change")&&f.pending(f.chains){rows=rows[:len(rows)-1]}
+	if f.kind=="prefix-change"&&f.chains>1{processes[5312].created++}
+	if (f.kind=="chain"||f.kind=="chain-reduced")&&f.mode=="foreign"&&f.chains>1{processes[5312].image="D:/foreign.exe"}
+	if f.kind=="birth"{processes[5312].created-=20000000}
+	return watchdogChainFromSnapshotMode(instance,principal,rows,func(pid,parent uint32)(*watchdogProcess,string,bool,error){p:=processes[pid];f.acquired=append(f.acquired,p);sid:=principal;if f.kind=="owner"{sid="foreign"};return p,sid,true,nil},true)
+}
+func(f *watchdogObserveFixture) closeChain(chain []*watchdogProcess)error{
+	var result error
+	for _,p:=range chain{if p!=nil{if !p.closed{p.closed=true;f.closed[p]++;if f.closeFail{p.closeErr=errors.New("fixture_close_failed")}};result=errors.Join(result,p.closeErr)}}
+	return result
+}
+func(f *watchdogObserveFixture) sample(context.Context)(watchdogSample,error){
+	f.samples++
+	if f.kind=="unknown-sample"{return watchdogSample{},errors.New("unknown_sample_error")}
+	if f.kind=="old-status"&&f.pending(f.samples){return watchdogSample{At:f.r.published.Add(-time.Second),WatchdogPID:f.r.previousPID},nil}
+	if (f.kind=="mutable"||f.kind=="rename")&&f.pending(f.samples){return watchdogSample{},watchdogObservationPending("mutable_snapshot_raced")}
+	if (f.kind=="mutable"||f.kind=="rename")&&f.mode=="foreign"&&f.samples>1{return watchdogSample{},errors.New("foreign_metadata")}
+	at:=f.now
+	if f.samples>1{f.now=f.now.Add(9*time.Second);at=f.now}
+	pid:=uint32(5313);if f.kind=="chain-reduced"{pid=5314};if f.kind=="old-status"&&f.mode=="foreign"&&f.samples>1||f.kind=="sample-pid"{pid=9999}
+	s:=watchdogSample{At:at,WatchdogPID:pid,Healthy:true,ObservationKind:"health_only"}
+	if f.kind=="health"{s.Healthy=false}
+	return s,nil
+}
+func(f *watchdogObserveFixture) eventRead(context.Context,time.Time,uint32)error{
+	f.events++
+	if f.kind=="append"&&f.pending(f.events){return watchdogObservationPending("events_appending")}
+	if f.kind=="append"&&f.mode=="foreign"&&f.events>1{return errors.New("foreign_event")}
+	return nil
+}
+func(f *watchdogObserveFixture) pause(ctx context.Context,d time.Duration)error{
+	f.pauses++;if f.cancel!=nil{f.cancel()}
+	if e:=ctx.Err();e!=nil{return e}
+	f.now=f.now.Add(d);return nil
+}
+func(f *watchdogObserveFixture) assertClosedOnce(t *testing.T){
+	t.Helper();if e:=f.r.Close();e!=nil&&!f.closeFail{t.Fatal(e)};_ = f.r.Close()
+	for _,p:=range f.acquired{if f.closed[p]!=1{t.Fatal("partial/selected process not closed once",p.pid,f.closed[p])}}
+	if f.owner.closeCalls!=1||!f.r.collection.confirmed||!f.r.collection.required||f.r.collection.stopAttempted!=true{t.Fatal("original collection/owner was replaced")}
+}
+func TestWatchdogObserveWaitsOnlyForBoundedStartupReadiness(t *testing.T){
+	for _,kind:=range []string{"chain","chain-reduced","queued","pid-pending","action-pending","old-status","mutable","rename","append"}{
+		for _,mode:=range []string{"progress","deadline","foreign"}{
+			t.Run(kind+"/"+mode,func(t *testing.T){
+				f:=watchdogObserveFixtureNew(t,kind,mode);result,e:=f.r.Observe(context.Background(),watchdogTestID())
+				if mode=="progress"{if e!=nil||!result.valid(watchdogTestID())||f.pauses==0{t.Fatal("transient startup could not converge",result,e)}}else{
+					if e==nil{t.Fatal("unready/foreign became success")}
+					if mode=="deadline"&&!errors.Is(e,context.DeadlineExceeded){t.Fatal("deadline not shared",e)}
+					if mode=="foreign"&&(errors.Is(e,context.DeadlineExceeded)||watchdogObservationRetry(e)){t.Fatal("foreign error retried",e)}
+				}
+				if f.now.Sub(f.r.published)>152*time.Second{t.Fatal("retry extended the observation deadline")}
+				f.assertClosedOnce(t)
+			})
+		}
+	}
+}
+func TestWatchdogObserveForeignInvalidChangedAndCancelStayTerminal(t *testing.T){
+	for _,kind:=range []string{"definition","instance-pid","instance-guid","ready-to-queued","prefix-change","unknown-task","unknown-sample","birth","owner","image","sample-pid","health","cancel","close-failed"}{
+		t.Run(kind,func(t *testing.T){
+			mode:="foreign";source:=kind;if kind=="cancel"||kind=="close-failed"{source="chain";mode="deadline"}
+			f:=watchdogObserveFixtureNew(t,source,mode);ctx,cancel:=context.WithCancel(context.Background());defer cancel()
+			if kind=="cancel"{f.cancel=cancel};if kind=="close-failed"{f.closeFail=true}
+			_,e:=f.r.Observe(ctx,watchdogTestID());if e==nil||watchdogObservationRetry(e)||errors.Is(e,context.DeadlineExceeded){t.Fatal("invalid state became retry/success",e)}
+			if kind=="cancel"&&!errors.Is(e,context.Canceled){t.Fatal("cancel lost",e)}
+			if kind=="close-failed"&&f.pauses!=0{t.Fatal("cleanup failure was retried")}
+			f.assertClosedOnce(t)
+		})
+	}
+}
+
+func TestWatchdogObservationDecoderDoesNotWeakenStopDecoder(t *testing.T){
+	for _,kind:=range []string{"running","queued","pid-pending","action-pending","foreign-action","invalid-state","foreign-path","changed-definition","multiple"}{
+		t.Run(kind,func(t *testing.T){
+			v:=watchdogTaskFixtureJSON();i:=v["instances"].([]any)[0].(map[string]any)
+			switch kind{case "queued":i["state"]=2;i["pid"]=0;i["action"]="";case "pid-pending":i["pid"]=0;case "action-pending":i["action"]="";case "foreign-action":i["action"]="foreign";case "invalid-state":i["state"]=0;case "foreign-path":i["path"]="foreign";case "changed-definition":v["arguments"]="foreign";case "multiple":v["instances"]=append(v["instances"].([]any),i)}
+			raw,_:=json.Marshal(v);observed,e:=decodeWatchdogObservationTask(raw);good:=kind=="running"||kind=="queued"||kind=="pid-pending"||kind=="action-pending"
+			if (e==nil)!=good{t.Fatal("observation decoder boundary",e)}
+			_,strict:=decodeWatchdogTask(raw);if (strict==nil)!=(kind=="running"){t.Fatal("strict stop/check decoder changed",strict)}
+			if good&&observed.Instances[0].PID!=uint32(i["pid"].(int)){t.Fatal("observation invented process identity")}
+		})
+	}
+}
+
+func TestWatchdogObservationMutableRacesAreTypedAndCleanupIsNeverRetried(t *testing.T){
+	for _,kind:=range []string{"normal","append","rotation","bytes","physical","foreign-path","link","read-error","close-error"}{
+		t.Run(kind,func(t *testing.T){
+			raw:=[]byte("{}\n");if kind=="append"{raw=[]byte("{}")};v,_:=watchdogMutableFixture(t,raw);path:=watchdogEventsPath
+			if kind=="foreign-path"{path=watchdogTarget}
+			if kind=="close-error"{v.closeFailAt=0}
+			if kind=="rotation"{base:=v.scope.ops.create;v.scope.ops.create=func(p string,a,b,c uint32)(*os.File,error){f,e:=base(p,a,b,c);if f!=nil&&a==0x80&&b==7{i:=v.info[f];i.FileIndexLow++;v.info[f]=i};return f,e}}
+			calls:=0;value,e:=watchdogReadObservationMutableWith(v.scope,path,8192,func(f *os.File,n int64)([]byte,error){
+				calls++;got:=append([]byte(nil),raw...);i:=v.info[f]
+				if calls==1{switch kind{case "physical":i.FileIndexLow++;case "link":i.NumberOfLinks=2};v.info[f]=i}
+				if kind=="bytes"&&calls==2{got[0]='x'}
+				if kind=="read-error"{return nil,errors.New("unclassified_read")};return got,nil
+			})
+			transient:=kind=="append"||kind=="rotation"||kind=="bytes"
+			if kind=="normal"||kind=="close-error"{if e!=nil||string(value)!=string(raw){t.Fatal("normal snapshot",e)}}else if e==nil||watchdogObservationRetry(e)!=transient{t.Fatal("readiness error classification",e)}
+			cleanup:=v.scope.Close();if (cleanup!=nil)!=(kind=="close-error"){t.Fatal("cleanup counter not exercised",cleanup)};if cleanup!=nil{e=errors.Join(errors.New("cleanup"),e,cleanup);if watchdogObservationRetry(e){t.Fatal("cleanup became transient")}}
+			_ = v.scope.Close();for _,f:=range v.files{if v.counts[f]!=1{t.Fatal("read pin Close retried")}}
+		})
+	}
+}
+
+type watchdogObserveUpdateFixture struct{*watchdogTestResident;native *watchdogResidentNative}
+func(f *watchdogObserveUpdateFixture) Observe(ctx context.Context,id watchdogFileIdentity)(watchdogObservation,error){return f.native.Observe(ctx,id)}
+func(f *watchdogObserveUpdateFixture) Close()error{return errors.Join(f.native.Close(),f.watchdogTestResident.Close())}
+func TestWatchdogUpdateDoesNotRollbackWhileObservationIsStillNotReady(t *testing.T){
+	for _,mode:=range []string{"progress","deadline"}{
+		t.Run(mode,func(t *testing.T){
+			f:=watchdogObserveFixtureNew(t,"chain",mode);all,files,resident:=watchdogTestResources();resident.task=f.r.task.View
+			all.Resident=&watchdogObserveUpdateFixture{watchdogTestResident:resident,native:f.r}
+			result:=runWatchdogUpdate(context.Background(),true,func(context.Context)(*watchdogUpdateResources,error){return all,nil})
+			if mode=="progress"{
+				if !result.Qualified||!result.ObservationAccepted||result.RollbackAttempted||strings.Contains(strings.Join(files.calls,","),"rollback"){t.Fatal("not-ready forced rollback",result)}
+			}else if result.Qualified||result.Reason!="watchdog_postpublish_observation_failed"||!result.RollbackAttempted||!result.RollbackSucceeded{t.Fatal("finite deadline did not use existing recovery",result)}
+			if f.pauses==0||resident.closeCount!=1||files.closeCount!=1{t.Fatal("same consumer not exercised")}
+			f.assertClosedOnce(t)
 		})
 	}
 }

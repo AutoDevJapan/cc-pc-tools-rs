@@ -101,3 +101,38 @@ References:
 - [RunningTask properties and exact instance stop](https://learn.microsoft.com/en-us/windows/win32/taskschd/runningtask)
 - [Task instance enumeration and security context](https://learn.microsoft.com/en-us/windows/win32/api/taskschd/nf-taskschd-iregisteredtask-getinstances)
 - [Existing mutex access](https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-openmutexw)
+
+
+## Bounded readiness after publication
+
+Observe keeps one 150-second deadline across Task startup, chain acquisition,
+status samples and event snapshots. Only explicitly identified readiness states
+wait: no new instance yet; a validated queued/starting instance with no established
+PID/action yet; a verified launcher prefix awaiting its sole child; the unchanged
+predecessor status before the first new sample; or an incomplete/racing mutable
+observation snapshot. These states do not authorize Stop, publication or collection.
+A deadline or cancellation still fails and reaches the existing finite recovery.
+
+The read-only observation Task decoder preserves the real queued fields and
+reuses the fixed Task definition/Actions/principal verification. Stop and check
+continue using the unchanged strict running-instance decoder and fixed script.
+After a GUID or engine PID is observed it cannot change; the validated process
+prefix also keeps its PID, parent, creation time and image across retries. An
+established running instance cannot revert to queued. Foreign/invalid images,
+owners, births, instance IDs, definitions, unrelated status PIDs and unknown errors
+fail immediately. The engine PID remains observed data, not an independent proof
+that Task Scheduler has exposed the executable action process.
+
+Partial queried chains remain referenced for cleanup. A retry closes each old
+query handle once and retains its identity facts for the next observation; a
+failed Close is never retried or treated as a readiness condition. Collection
+obligations and the original lifetime owner remain unchanged throughout.
+
+Only status.json and events.jsonl permit read/write/delete sharing. Their bounded
+same-buffer snapshot still rejects links, reparse points, invalid physical paths,
+oversized data and held-object identity changes. A stable old object whose public
+name was atomically replaced is retried as a mutable observation race. A same-object
+append/overwrite race or incomplete event line also waits; raw data is not accepted
+until a complete stable snapshot is obtained. Any cleanup failure stays terminal.
+The executable/artifact/current-purpose pin contract is unchanged. Native Task
+startup and the normal artifact/origin/lifetime issuers remain unaccepted.

@@ -559,7 +559,53 @@ fn request_preservation_failure_is_not_parse_failure_or_network_attempt() {
 #[cfg(windows)]
 #[test]
 fn connected_receive_deadline_preserves_raw_before_rejection() {
-    fn at_deadline(deadline:std::time::Instant)->std::time::Instant{deadline}
+    use std::sync::mpsc::{sync_channel,Receiver,SyncSender};
+    use std::time::{Duration,Instant};
+    fn at_deadline(deadline:Instant)->Instant{deadline}
+    // Start only this fixture's response budget after OriginCalls has saved the
+    // actual request. The same responder receives that frame before replying.
+    // The cfg(test) post-enqueue barrier waits for response-ready (or deliberate
+    // noReply) before the same 1-second/40-ms receive budget. Production timing
+    // and raw preservation are unchanged; this is not a total-operation timer.
+    struct ReadyTransport {
+        inner:ConnectedReadonly,requests:Option<Receiver<Vec<u8>>>,responses:SyncSender<io::Result<Vec<u8>>>,
+        replies:std::collections::VecDeque<Option<Vec<u8>>>,observed:Vec<Vec<u8>>,
+    }
+    impl ReadyTransport {
+        fn new(replies:Vec<Option<Vec<u8>>>)->Self {
+            let (request_tx,request_rx)=sync_channel(8);let (reply_tx,reply_rx)=sync_channel(8);
+            let inner=ConnectedReadonly::from_owned_connection(request_tx,reply_rx,Instant::now()+Duration::from_secs(1)).unwrap();
+            Self{inner,requests:Some(request_rx),responses:reply_tx,replies:replies.into(),observed:Vec::new()}
+        }
+    }
+    impl ReadonlyTransport for ReadyTransport {
+        fn exchange(&mut self,request:&[u8],limit:usize)->io::Result<ReceivedReply> {
+            let requests=self.requests.take().ok_or_else(rejected)?;
+            let reply=self.replies.pop_front().ok_or_else(rejected)?;let timeout=reply.is_none();
+            let responses=self.responses.clone();let (ready_tx,ready_rx)=sync_channel(1);let (response_tx,response_rx)=sync_channel(1);let (release_tx,release_rx)=sync_channel::<()>(1);
+            let responder=std::thread::Builder::new().name("native-rpc-fixture".into()).spawn(move|| {
+                let result=(||->io::Result<Vec<u8>> {
+                    ready_tx.send(()).map_err(|_|rejected())?;
+                    let raw=requests.recv_timeout(Duration::from_secs(1)).map_err(|_|rejected())?;
+                    if let Some(reply)=reply{responses.send(Ok(reply)).map_err(|_|rejected())?;}
+                    response_tx.send(()).map_err(|_|rejected())?;
+                    let _=release_rx.recv_timeout(Duration::from_secs(1));Ok(raw)
+                })();
+                (requests,result)
+            })?;
+            let result=match ready_rx.recv_timeout(Duration::from_secs(1)) {
+                Ok(())=>{
+                    self.inner.deadline=Instant::now()+Duration::from_secs(1);
+                    self.inner.response_ready=Some((response_rx,if timeout{Duration::from_millis(40)}else{Duration::from_secs(1)}));
+                    self.inner.exchange(request,limit)
+                },
+                Err(_)=>Err(rejected()),
+            };
+            let _=release_tx.send(());
+            let (requests,observed)=responder.join().map_err(|_|rejected())?;self.requests=Some(requests);
+            self.observed.push(observed?);result
+        }
+    }
     let good=br#"{"id":1,"result":{"thread":{"id":"thread-owned"}}}"#.to_vec();
     let error=b" {\"id\":1,\"error\":{\"code\":-32601}}\r\n".to_vec();
     let cases:[(&str,Option<Vec<u8>>,bool,&str);7]=[
@@ -572,20 +618,14 @@ fn connected_receive_deadline_preserves_raw_before_rejection() {
         ("empty",Some(vec![]),false,"not_attempted"),
     ];
     for (name,reply,late,validation) in cases {
-        let dir=tempfile::tempdir().unwrap();
-        let (reply_tx,reply_rx)=std::sync::mpsc::sync_channel(8);
-        if let Some(raw)=&reply{reply_tx.send(Ok(raw.clone())).unwrap();}
-        let (request_tx,request_rx)=std::sync::mpsc::sync_channel(8);
-        let seconds=if reply.is_some(){1.0}else{0.04};
-        let mut transport=ConnectedReadonly::from_owned_connection(request_tx,reply_rx,
-            std::time::Instant::now()+std::time::Duration::from_secs_f64(seconds)).unwrap();
-        if late{transport.after_receive=Some(at_deadline);}
+        let dir=tempfile::tempdir().unwrap();let mut transport=ReadyTransport::new(vec![reply.clone()]);
+        if late{transport.inner.after_receive=Some(at_deadline);}
         assert!(collect_exact_rpc(&session(),&mut transport,dir.path()).is_err(),"{name}");
         let index=strict_value(&fs::read(dir.path().join("origin-index.private.json")).unwrap()).unwrap();
         assert_eq!(index["complete"],false,"{name}");
         let fact=&index["files"][0];assert_eq!(fact["validation"],validation,"{name}");
         let request=fs::read(dir.path().join("origin-request-1.jsonl")).unwrap();
-        assert_eq!(request_rx.try_recv().unwrap(),request,"{name}");
+        assert_eq!(transport.observed,vec![request],"{name}");assert!(transport.replies.is_empty(),"{name}");
         let bounded=reply.as_ref().filter(|raw|!raw.is_empty()&&raw.len()<=MAX_FRAME);
         if let Some(raw)=bounded {
             let (saved,saved_fact)=stable_read(&dir.path().join("origin-response-1.jsonl"),MAX_FRAME as u64).unwrap();
@@ -595,24 +635,25 @@ fn connected_receive_deadline_preserves_raw_before_rejection() {
         } else {
             assert!(fact["reply"].is_null(),"{name}");
             assert!(!dir.path().join("origin-response-1.jsonl").exists(),"{name}");
+            assert_eq!(fact["transport"],"failed_or_timeout","{name}");
         }
-        drop(reply_tx);
     }
     let dir=tempfile::tempdir().unwrap();
-    let (reply_tx,reply_rx)=std::sync::mpsc::sync_channel(8);
     let page=br#"{"id":2,"result":{"data":[{"turnId":"turn-owned","item":{"id":"item-own"}}],"nextCursor":null}}"#.to_vec();
-    reply_tx.send(Ok(good.clone())).unwrap();reply_tx.send(Ok(page.clone())).unwrap();
-    let (request_tx,request_rx)=std::sync::mpsc::sync_channel(8);
-    let mut transport=ConnectedReadonly::from_owned_connection(request_tx,reply_rx,
-        std::time::Instant::now()+std::time::Duration::from_secs(1)).unwrap();
+    let mut transport=ReadyTransport::new(vec![Some(good.clone()),Some(page.clone())]);
     let index=collect_exact_rpc(&session(),&mut transport,dir.path()).unwrap();
     assert_eq!(index["complete"],true);assert_eq!(index["files"].as_array().unwrap().len(),2);
     for (offset,raw) in [good,page].iter().enumerate(){
         assert_eq!(fs::read(dir.path().join(format!("origin-response-{}.jsonl",offset+1))).unwrap(),*raw);
-        assert_eq!(index["files"][offset]["timeliness"],"in_time");
-        assert_eq!(index["files"][offset]["validation"],"accepted");
-        let _=request_rx.try_recv().unwrap();
+        assert_eq!(index["files"][offset]["timeliness"],"in_time");assert_eq!(index["files"][offset]["validation"],"accepted");
+        assert_eq!(transport.observed[offset],fs::read(dir.path().join(format!("origin-request-{}.jsonl",offset+1))).unwrap());
     }
+    assert_eq!(transport.observed.len(),2);assert!(transport.replies.is_empty());
+    let dir=tempfile::tempdir().unwrap();let (tx,rx)=sync_channel(1);drop(rx);let (_reply,answers)=sync_channel(1);
+    let mut disconnected=ConnectedReadonly::from_owned_connection(tx,answers,Instant::now()+Duration::from_secs(1)).unwrap();
+    assert!(collect_exact_rpc(&session(),&mut disconnected,dir.path()).is_err());
+    let index=strict_value(&fs::read(dir.path().join("origin-index.private.json")).unwrap()).unwrap();
+    assert_eq!(index["complete"],false);assert!(index["files"][0]["reply"].is_null());assert_eq!(index["files"][0]["transport"],"failed_or_timeout");
 }
 
 #[test]
@@ -1035,7 +1076,7 @@ impl CaptureFixtureDiagnostic {
         match result {Ok(value)=>value,Err(error)=>{
             if let Some(failure)=error.get_ref().and_then(|value|value.downcast_ref::<ExportReadFailure>()) {
                 self.phase=match failure.phase {"receipt"=>"read_registered_receipt","collection"=>"read_registered_collection",_=>"read_registered_binding"};
-                self.category=failure.category;self.save();panic!("owned_capture_fixture_read_failed");
+                self.category=failure.category;self.facts=json!({"binding_matches":failure.binding_matches});self.save();panic!("owned_capture_fixture_read_failed");
             }
             self.category=match error.raw_os_error() {Some(5)=>"win32_access_denied",Some(6)=>"win32_invalid_handle",Some(32)=>"win32_sharing_violation",Some(87)=>"win32_invalid_parameter",
                 _=>match error.kind(){io::ErrorKind::PermissionDenied=>"permission_denied",io::ErrorKind::TimedOut=>"timed_out",io::ErrorKind::NotFound=>"not_found",io::ErrorKind::InvalidData=>"invalid_data",_=>"io_failure"}};
@@ -1205,7 +1246,8 @@ fn actual_capture_job_reclaim_retention_and_membership_controls() {
                 let stderr_eof=facts.and_then(|f|f["stderr_eof"].as_bool());
                 let std_child_reaped=facts.and_then(|f|f["std_child_reaped"].as_bool());
                 let job_active=facts.and_then(|f|f["job_active_processes"].as_u64());
-                panic!("owned_capture_fixture_failed mode={mode} phase={phase} category={category} exit_nonzero=true original_complete={original_complete:?} stdin_closed={stdin_closed:?} stdout_eof={stdout_eof:?} stderr_eof={stderr_eof:?} std_child_reaped={std_child_reaped:?} job_active={job_active:?}");
+                let binding_matches:[Option<bool>;6]=std::array::from_fn(|at|facts.and_then(|f|f["binding_matches"].get(at)).and_then(Value::as_bool));
+                panic!("owned_capture_fixture_failed mode={mode} phase={phase} category={category} exit_nonzero=true original_complete={original_complete:?} stdin_closed={stdin_closed:?} stdout_eof={stdout_eof:?} stderr_eof={stderr_eof:?} std_child_reaped={std_child_reaped:?} job_active={job_active:?} binding_matches={binding_matches:?}");
             }
             break;}
             assert!(std::time::Instant::now()<until,"{mode}");std::thread::sleep(std::time::Duration::from_millis(10));}
@@ -1548,4 +1590,67 @@ fn registered_export_components_keep_exact_facts_and_fixed_failure_categories() 
     let malformed=dir.path().join("malformed.json");let bad=save_new(&malformed,b"{bad-json").unwrap();
     let error=load_export_component(&malformed,&serde_json::to_value(bad).unwrap(),MAX_RECEIPT,"collection").unwrap_err();
     let failure=error.get_ref().and_then(|e|e.downcast_ref::<ExportReadFailure>()).unwrap();assert_eq!(failure.category,"strict_json_rejected");
+}
+
+#[cfg(windows)]
+#[test]
+fn registered_export_binding_roundtrip_rejects_each_field_independently() {
+    let directory=tempfile::tempdir().unwrap();
+    let context=Context{root:directory.path().join("root"),jobs:directory.path().join("jobs"),home:directory.path().join("home"),
+        codex_home:directory.path().join("codex"),gto:directory.path().join("unused-gto"),executable:std::env::current_exe().unwrap(),rt:Arc::new(crate::System::default())};
+    let jid="owned-binding-fixture";let generation="fixture-generation";
+    // Large integer identities exercise the actual JSON save/load route without
+    // minting an OS launch: this is an internal artifact/registration fixture.
+    let root=Birth{pid:201,created:134000000000000001};let child=Birth{pid:202,created:134000000000000003};
+    let path=context.job_dir(jid).join("native-binding-fixture");fs::create_dir_all(&path).unwrap();
+    let binding=save_json(&path.join("binding.private.json"),&json!({"fixture_only":true}),MAX_BINDING).unwrap();
+    let collection=json!({"fixture_only":true});
+    let collection_fact=save_json(&path.join("collection.private.json"),&collection,MAX_RECEIPT).unwrap();
+    let receipt=json!({"domain":DOMAIN,"purpose":PURPOSE,"job_id":jid,"started_at":generation,
+        "root":root,"child":child,"binding":binding,"collection":collection});
+    let receipt_fact=save_json(&path.join("export.private.json"),&receipt,MAX_RECEIPT).unwrap();
+    let row=json!({"id":jid,"status":"running","started_at":generation,"native_evidence_purpose":PURPOSE,
+        "pid":root.pid,"pid_created":root.created,"codex_pid":child.pid,"codex_pid_created":child.created});
+    context.save(&row).unwrap();
+    context.publish_native_export(FinishedExport{job_id:jid.into(),generation:generation.into(),root:root.clone(),child:child.clone(),
+        directory:"native-binding-fixture".into(),receipt:receipt_fact,collection:collection_fact}).unwrap();
+    let persisted=context.load(jid).unwrap();let reg=&persisted["native_export"];
+    assert_eq!(reg["root"]["created"],root.created);assert_eq!(reg["child"]["created"],child.created);
+    let mut reads=Vec::new();
+    let selected=read_export_artifacts(path,reg,jid,|path|{reads.push(path.file_name().unwrap().to_str().unwrap().to_string());Ok(())}).unwrap();
+    assert_eq!(reads,["export.private.json","collection.private.json","binding.private.json"]);
+    assert_eq!(export_attempt_binding_matches(selected.metadata(),reg,jid),[true;6]);
+    for (at,key) in ["domain","purpose","job_id","started_at","root","child"].into_iter().enumerate() {
+        let path=directory.path().join(format!("rejected-{at}"));fs::create_dir(&path).unwrap();
+        let mut changed=receipt.clone();changed[key]=Value::Null;
+        let fact=save_json(&path.join("export.private.json"),&changed,MAX_RECEIPT).unwrap();
+        let mut registration=reg.clone();registration["receipt"]=serde_json::to_value(fact).unwrap();
+        let mut reads=0;
+        let result=read_export_artifacts(path,&registration,jid,|_|{reads+=1;Ok(())});
+        let error=match result {Ok(_)=>panic!("mismatched_binding_was_accepted"),Err(error)=>error};
+        let failure=error.get_ref().and_then(|error|error.downcast_ref::<ExportReadFailure>()).unwrap();
+        let mut expected=[true;6];expected[at]=false;
+        assert_eq!(failure.phase,"receipt");assert_eq!(failure.category,"attempt_binding_mismatch");
+        assert_eq!(failure.binding_matches,Some(expected));assert_eq!(reads,1);
+        let public=error.to_string();assert!(!public.contains(jid));assert!(!public.contains(generation));
+        assert!(!public.contains(&directory.path().to_string_lossy().into_owned()));
+    }
+}
+
+#[cfg(windows)]
+#[test]
+fn production_origin_deadline_is_not_reset_by_request_preservation() {
+    let directory=tempfile::tempdir().unwrap();
+    let (requests,observed)=std::sync::mpsc::sync_channel(1);
+    let (reply,answers)=std::sync::mpsc::sync_channel(1);
+    reply.send(Ok(br#"{"id":1,"result":{"thread":{"id":"thread-owned"}}}"#.to_vec())).unwrap();
+    let mut transport=ConnectedReadonly::from_owned_connection(requests,answers,
+        std::time::Instant::now()+std::time::Duration::from_secs(1)).unwrap();
+    transport.deadline=std::time::Instant::now();
+    assert!(collect_exact_rpc(&session(),&mut transport,directory.path()).is_err());
+    assert!(matches!(observed.try_recv(),Err(std::sync::mpsc::TryRecvError::Empty)));
+    let index=strict_value(&fs::read(directory.path().join("origin-index.private.json")).unwrap()).unwrap();
+    assert_eq!(index["complete"],false);assert_eq!(index["files"][0]["transport"],"failed_or_timeout");
+    assert_eq!(index["files"][0]["validation"],"not_attempted");assert!(index["files"][0]["reply"].is_null());
+    assert!(!directory.path().join("origin-response-1.jsonl").exists());
 }

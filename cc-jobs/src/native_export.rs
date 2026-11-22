@@ -691,15 +691,15 @@ impl Context {
 
 
 #[derive(Debug)]
-struct ExportReadFailure {phase:&'static str,category:&'static str,primary:Option<io::Error>}
+struct ExportReadFailure {phase:&'static str,category:&'static str,primary:Option<io::Error>,binding_matches:Option<[bool;6]>}
 impl std::fmt::Display for ExportReadFailure {
-    fn fmt(&self,f:&mut std::fmt::Formatter<'_>)->std::fmt::Result {write!(f,"native_export_read_failed phase={} category={}",self.phase,self.category)}
+    fn fmt(&self,f:&mut std::fmt::Formatter<'_>)->std::fmt::Result {write!(f,"native_export_read_failed phase={} category={} binding_matches={:?}",self.phase,self.category,self.binding_matches)}
 }
 impl std::error::Error for ExportReadFailure {
     fn source(&self)->Option<&(dyn std::error::Error+'static)> {self.primary.as_ref().map(|error|error as &(dyn std::error::Error+'static))}
 }
 fn export_read_failure(phase:&'static str,category:&'static str,primary:Option<io::Error>)->io::Error {
-    io::Error::other(ExportReadFailure{phase,category,primary})
+    io::Error::other(ExportReadFailure{phase,category,primary,binding_matches:None})
 }
 fn load_export_component(path:&Path,expected:&Value,limit:u64,phase:&'static str)->io::Result<Value> {
     let (raw,fact)=stable_read(path,limit).map_err(|primary|export_read_failure(phase,"stable_read_failed",Some(primary)))?;
@@ -708,11 +708,19 @@ fn load_export_component(path:&Path,expected:&Value,limit:u64,phase:&'static str
     strict_value(&raw).map_err(|primary|export_read_failure(phase,"strict_json_rejected",Some(primary)))
 }
 
+// Fixed booleans diagnose the rejected comparison without exporting identities,
+// environment values or receipt contents. All six original checks remain exact.
+fn export_attempt_binding_matches(receipt:&Value,reg:&Value,jid:&str)->[bool;6] {
+    [receipt["domain"]==DOMAIN,receipt["purpose"]==PURPOSE,receipt["job_id"]==jid,
+        receipt["started_at"]==reg["started_at"],receipt["root"]==reg["root"],receipt["child"]==reg["child"]]
+}
 fn read_export_artifacts(directory:PathBuf,reg:&Value,jid:&str,mut qualify:impl FnMut(&Path)->io::Result<()>)->io::Result<SelectedExport> {
 qualify(&directory.join("export.private.json"))?;
 let receipt=load_export_component(&directory.join("export.private.json"),&reg["receipt"],MAX_RECEIPT,"receipt")?;
-if receipt["domain"]!=DOMAIN||receipt["purpose"]!=PURPOSE||receipt["job_id"]!=jid||receipt["started_at"]!=reg["started_at"]||
-    receipt["root"]!=reg["root"]||receipt["child"]!=reg["child"]{return Err(export_read_failure("receipt","attempt_binding_mismatch",None));}
+let binding_matches=export_attempt_binding_matches(&receipt,reg,jid);
+if !binding_matches.iter().all(|matches|*matches) {
+    return Err(io::Error::other(ExportReadFailure{phase:"receipt",category:"attempt_binding_mismatch",primary:None,binding_matches:Some(binding_matches)}));
+}
 qualify(&directory.join("collection.private.json"))?;
 let collection=load_export_component(&directory.join("collection.private.json"),&reg["collection"],MAX_RECEIPT,"collection")?;
 if collection!=receipt["collection"]{return Err(export_read_failure("collection","receipt_collection_mismatch",None));}
@@ -832,6 +840,7 @@ pub(crate) struct ConnectedReadonly {
     replies:std::sync::mpsc::Receiver<io::Result<Vec<u8>>>,
     deadline:std::time::Instant,
     #[cfg(test)] after_receive:Option<fn(std::time::Instant)->std::time::Instant>,
+    #[cfg(test)] response_ready:Option<(std::sync::mpsc::Receiver<()>,std::time::Duration)>,
 }
 impl ConnectedReadonly {
     pub(crate) fn from_owned_connection(
@@ -841,7 +850,7 @@ impl ConnectedReadonly {
     )->io::Result<Self>{
         let now=std::time::Instant::now();
         if deadline<=now||deadline.duration_since(now)>std::time::Duration::from_secs(45){return Err(rejected());}
-        Ok(Self{requests,replies,deadline,#[cfg(test)] after_receive:None})
+        Ok(Self{requests,replies,deadline,#[cfg(test)] after_receive:None,#[cfg(test)] response_ready:None})
     }
     fn received_at(&self)->std::time::Instant {
         #[cfg(test)] if let Some(clock)=self.after_receive{return clock(self.deadline);}
@@ -854,6 +863,11 @@ impl ReadonlyTransport for ConnectedReadonly {
         if !matches!(s(&frame,"method"),"initialize"|"thread/read"|"thread/turns/list"|"thread/items/list"){return Err(rejected());}
         let _left=self.deadline.checked_duration_since(std::time::Instant::now()).ok_or_else(rejected)?;
         enqueue_before_deadline(&self.requests,request.to_vec(),self.deadline)?;
+        // Test-only barrier at the real post-send/pre-receive boundary.
+        #[cfg(test)] if let Some((ready,budget))=self.response_ready.take(){
+            ready.recv_timeout(std::time::Duration::from_secs(1)).map_err(|_|rejected())?;
+            self.deadline=std::time::Instant::now()+budget;
+        }
         for _ in 0..=16 {
             let left=self.deadline.checked_duration_since(std::time::Instant::now()).ok_or_else(rejected)?;
             let raw=self.replies.recv_timeout(left).map_err(|_|rejected())??;

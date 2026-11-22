@@ -371,3 +371,22 @@ The actual nested-Job capture fixture requires process-per-test isolation (the
 normal nextest execution used by CI). Its controller is assigned irreversibly to
 its test-owned Job. The helper entry tests do nothing without their controlled
 environment; their standalone PASS does not count as an actual owned capture.
+
+## Fixed registration diagnostics and response-ready controls
+
+A rejected registered receipt reports only six comparison booleans, in this
+order: domain, purpose, job ID, generation, controller birth, child birth. Each
+comparison remains exact, after the held file's registered fact and strict JSON
+checks. Values, process IDs, creation times, paths, environment and raw errors
+are not diagnostic output. Missing component reads remain distinct from tuple
+mismatches. The booleans identify which check rejected an attempt; they are not
+an OS cause or permission to accept a mismatched registration.
+
+The deadline controls own a responder which receives the exact saved request
+before preparing a reply (or deliberately providing no reply). A test-only
+post-send barrier starts the existing receive budget after response-ready;
+actual transport timing has no reset. An already-expired production deadline
+still rejects without sending or preserving a reply. Late replies remain raw
+artifacts with complete=false. A same-registration roundtrip through the normal
+job save/load route and independent single-field negatives cover the actual
+artifact-consumer comparison, without issuing a launch or origin capability.

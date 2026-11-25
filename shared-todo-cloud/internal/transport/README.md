@@ -54,6 +54,18 @@ types and failed reads return an error without a cache fallback. Only this
 exchange accepts the bounded larger reply needed for a note; ordinary control
 replies keep their 4 KiB limit. Upgrade the server, bridge, then CLI before use.
 
+`capacity-version` is a one-shot control frame with the same `cachePath`.
+The Rust caller holds the existing byte lock. The bridge uses the installed
+configuration to make one authenticated `GET /api/v1/version` and returns
+`version: {revision, stateId}` in its reply. A missing or malformed version
+fails. The Rust caller checks the sidecar and the exact bytes of its local
+cache before reading the capacity decision. It releases the byte lock before
+writing the result. On Windows the one-shot bridge belongs to the CLI's process
+job from creation, so cancellation also ends the in-flight bridge. This read
+does not acquire a lease, fetch a snapshot, resolve pending writes, or refresh
+the cache. Ordinary sync can fill the missing byte count of a same-state sidecar
+under the writer lock, after verifying the existing cache digest.
+
 One `watch --config <path>` process per cache can pull browser changes every five
 seconds. Its own OS lock prevents duplicate watchers. `sync --config <path>` runs
 one pull. Both use the legacy byte lock; ordinary readers only read the shared
@@ -61,8 +73,9 @@ cache. No per-task watchers or services are installed by this package.
 Each watch poll first fetches `GET /api/v1/version` with `revision` and `stateId`.
 If they match the small cache sidecar and the cache file has the recorded size,
 the poll does not open/parse/serialize the document, acquire the ToDo byte lock,
-or acquire a distributed lease. Changed versions alone call `sync`. A v1 server
-without the endpoint falls back to a normal bounded sync.
+or acquire a distributed lease. A changed version, invalidated cache, or
+unverified cache size calls `sync`. A v1 server without the endpoint falls back
+to a normal bounded sync.
 `session`, `sync` and `watch` require the valid activation marker; they cannot
 replace the latest local ledger before the explicit cutover.
 

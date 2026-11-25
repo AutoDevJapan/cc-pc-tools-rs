@@ -150,6 +150,23 @@ func (c *Client) version(ctx context.Context) (Version, error) {
 	err := c.callLimit(ctx, "GET", "/api/v1/version", nil, &v, 4096)
 	return v, err
 }
+// The capacity read needs a complete version identity. Watch retains its
+// older-server compatibility through version().
+func (c *Client) capacityVersion(ctx context.Context) (Version, error) {
+	var raw json.RawMessage
+	if err := c.callLimit(ctx, http.MethodGet, "/api/v1/version", nil, &raw, 4096); err != nil {
+		return Version{}, err
+	}
+	if _, err := readProjectionFields(raw, "revision", "stateId"); err != nil {
+		return Version{}, err
+	}
+	var version Version
+	if json.Unmarshal(raw, &version) != nil || !projectionDigestPattern.MatchString(version.StateID) {
+		return Version{}, errors.New("todo_remote_invalid_response")
+	}
+	return version, nil
+}
+
 func encodeJSON(v any) ([]byte, error) {
 	var b bytes.Buffer
 	enc := json.NewEncoder(&b)

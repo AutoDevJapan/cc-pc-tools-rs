@@ -1,6 +1,7 @@
 package transport
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -10,23 +11,60 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 type bridgeRequest struct {
-	Op           string `json:"op"`
 	CachePath    string `json:"cachePath"`
 	DocumentPath string `json:"documentPath"`
 	ItemID       int64  `json:"itemId,omitempty"`
 }
+
+// Decode the dispatch key before decoding the other fields. The struct
+// decoder accepts case-insensitive matches and uses the last duplicate.
+func bridgeOperation(frame json.RawMessage) (string, error) {
+	invalid := errors.New("todo_remote_invalid_control_frame")
+	if !utf8.Valid(frame) {
+		return "", invalid
+	}
+	decoder := json.NewDecoder(bytes.NewReader(frame))
+	if token, err := decoder.Token(); err != nil || token != json.Delim('{') {
+		return "", invalid
+	}
+	var op string
+	for decoder.More() {
+		key, err := decoder.Token()
+		name, ok := key.(string)
+		if err != nil || !ok {
+			return "", invalid
+		}
+		if strings.EqualFold(name, "op") {
+			if name != "op" || op != "" || decoder.Decode(&op) != nil || op == "" {
+				return "", invalid
+			}
+		} else {
+			var ignored json.RawMessage
+			if decoder.Decode(&ignored) != nil {
+				return "", invalid
+			}
+		}
+	}
+	if token, err := decoder.Token(); err != nil || token != json.Delim('}') || op == "" {
+		return "", invalid
+	}
+	return op, nil
+}
+
 type bridgeResponse struct {
 	OK          bool         `json:"ok"`
 	Revision    uint64       `json:"revision,omitempty"`
 	Error       string       `json:"error,omitempty"`
 	CurrentNote *CurrentNote `json:"currentNote,omitempty"`
+	Version     *Version     `json:"version,omitempty"`
 }
 
-// Serve keeps snapshots and candidates on disk. A current-note read returns
-// its bounded single-item projection on the dedicated control exchange.
+// Serve keeps snapshots and candidates on disk. One-shot readers use
+// the existing authenticated connection without opening a writer session.
 // EOF, including a dead Rust parent, releases the lease via the same defer.
 func Serve(ctx context.Context, cfg Config, in io.Reader, out io.Writer) error {
 	if err := requireActivation(cfg); err != nil {
@@ -45,15 +83,35 @@ func Serve(ctx context.Context, cfg Config, in io.Reader, out io.Writer) error {
 		}
 	}()
 	for {
-		var req bridgeRequest
-		if err = dec.Decode(&req); err == io.EOF {
+		var frame json.RawMessage
+		if err = dec.Decode(&frame); err == io.EOF {
 			return nil
 		} else if err != nil {
 			return errors.New("todo_remote_invalid_control_frame")
 		}
+		op, frameErr := bridgeOperation(frame)
+		if frameErr != nil {
+			return frameErr
+		}
+		var req bridgeRequest
+		if json.Unmarshal(frame, &req) != nil {
+			return errors.New("todo_remote_invalid_control_frame")
+		}
 		var revision uint64
 		var note *CurrentNote
-		switch req.Op {
+		var version *Version
+		switch op {
+		case "capacity-version":
+			_, frameErr := readProjectionFields(frame, "op", "cachePath")
+			if frameErr != nil || session != nil || !samePath(req.CachePath, cfg.CachePath) {
+				err = errors.New("todo_remote_invalid_control_frame")
+				break
+			}
+			var observed Version
+			observed, err = client.capacityVersion(ctx)
+			if err == nil {
+				version = &observed
+			}
 		case "current-note":
 			if session != nil || req.ItemID <= 0 || !samePath(req.CachePath, cfg.CachePath) || req.DocumentPath != "" {
 				err = errors.New("todo_remote_invalid_note_request")
@@ -99,14 +157,14 @@ func Serve(ctx context.Context, cfg Config, in io.Reader, out io.Writer) error {
 		default:
 			err = errors.New("todo_remote_unknown_operation")
 		}
-		resp := bridgeResponse{OK: err == nil, Revision: revision, CurrentNote: note}
+		resp := bridgeResponse{OK: err == nil, Revision: revision, CurrentNote: note, Version: version}
 		if err != nil {
 			resp.Error = err.Error()
 		}
 		if encodeErr := enc.Encode(resp); encodeErr != nil {
 			return errors.New("todo_remote_control_write_failed")
 		}
-		if req.Op == "close" || req.Op == "current-note" || err != nil {
+		if op == "close" || op == "current-note" || op == "capacity-version" || err != nil {
 			return nil
 		}
 	}

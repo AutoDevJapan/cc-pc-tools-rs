@@ -445,7 +445,7 @@ func TestServerLeaseFailureAndEOFRelease(t *testing.T) {
 		t.Fatal(err)
 	}
 	var out bytes.Buffer
-	err := Serve(context.Background(), cfg, strings.NewReader(string(wire(bridgeRequest{Op: "begin", CachePath: path}))+"\n"), &out)
+	err := Serve(context.Background(), cfg, strings.NewReader(string(wire(map[string]string{"op": "begin", "cachePath": path}))+"\n"), &out)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -17,7 +17,7 @@ import (
 // JSON escaping can expand each byte up to sixfold; no full snapshot is read.
 const maxNoteWireBytes = 6*MaxDocumentBytes + 4096
 
-var noteDigestPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
+var projectionDigestPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
 
 type CurrentNote struct {
 	ID         int64  `json:"id"`
@@ -65,6 +65,46 @@ func validJSONSurrogates(raw []byte) bool {
 	return true
 }
 
+// Check the fields before Go's decoder collapses duplicates or accepts
+// missing or null numbers as zero.
+func readProjectionFields(raw []byte, names ...string) (map[string]json.RawMessage, error) {
+	invalid := errors.New("todo_remote_invalid_response")
+	if !utf8.Valid(raw) {
+		return nil, invalid
+	}
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	first, err := decoder.Token()
+	if err != nil || first != json.Delim('{') {
+		return nil, invalid
+	}
+	fields := make(map[string]json.RawMessage, len(names))
+	for decoder.More() {
+		key, err := decoder.Token()
+		name, ok := key.(string)
+		if err != nil || !ok || fields[name] != nil || len(fields) == len(names) {
+			return nil, invalid
+		}
+		var value json.RawMessage
+		if decoder.Decode(&value) != nil {
+			return nil, invalid
+		}
+		fields[name] = value
+	}
+	if _, err = decoder.Token(); err != nil {
+		return nil, invalid
+	}
+	if _, err = decoder.Token(); err != io.EOF || len(fields) != len(names) {
+		return nil, invalid
+	}
+	for _, name := range names {
+		value, ok := fields[name]
+		if !ok || bytes.Equal(bytes.TrimSpace(value), []byte("null")) {
+			return nil, invalid
+		}
+	}
+	return fields, nil
+}
+
 func (c *Client) currentNote(ctx context.Context, id int64) (CurrentNote, error) {
 	if id <= 0 {
 		return CurrentNote{}, errors.New("todo_remote_invalid_note_request")
@@ -92,46 +132,17 @@ func (c *Client) currentNote(ctx context.Context, id int64) (CurrentNote, error)
 	if len(raw) > maxNoteWireBytes {
 		return CurrentNote{}, errResponseTooLarge
 	}
-	if !utf8.Valid(raw) {
-		return CurrentNote{}, errors.New("todo_remote_invalid_response")
-	}
-	decoder := json.NewDecoder(bytes.NewReader(raw))
-	first, err := decoder.Token()
-	if err != nil || first != json.Delim('{') {
-		return CurrentNote{}, errors.New("todo_remote_invalid_response")
-	}
-	fields := make(map[string]json.RawMessage, 5)
-	for decoder.More() {
-		key, e := decoder.Token()
-		name, ok := key.(string)
-		if e != nil || !ok || fields[name] != nil {
-			return CurrentNote{}, errors.New("todo_remote_invalid_response")
-		}
-		var value json.RawMessage
-		if decoder.Decode(&value) != nil {
-			return CurrentNote{}, errors.New("todo_remote_invalid_response")
-		}
-		fields[name] = value
-	}
-	if _, err = decoder.Token(); err != nil {
-		return CurrentNote{}, errors.New("todo_remote_invalid_response")
-	}
-	if _, err = decoder.Token(); err != io.EOF || len(fields) != 5 {
-		return CurrentNote{}, errors.New("todo_remote_invalid_response")
+	fields, err := readProjectionFields(raw, "id", "note", "noteSha256", "revision", "stateId")
+	if err != nil {
+		return CurrentNote{}, err
 	}
 	var result CurrentNote
-	for _, name := range []string{"id", "note", "noteSha256", "revision", "stateId"} {
-		value, ok := fields[name]
-		if !ok || bytes.Equal(bytes.TrimSpace(value), []byte("null")) {
-			return CurrentNote{}, errors.New("todo_remote_invalid_response")
-		}
-	}
 	// Go's decoder replaces unpaired surrogate escapes with U+FFFD. Reject
 	// them before decoding so the value remains faithful to the Rust editor.
 	if !validJSONSurrogates(fields["note"]) || json.Unmarshal(raw, &result) != nil {
 		return CurrentNote{}, errors.New("todo_remote_invalid_response")
 	}
-	if result.ID != id || len(result.Note) > MaxDocumentBytes || !noteDigestPattern.MatchString(result.StateID) || !noteDigestPattern.MatchString(result.NoteSHA256) || result.NoteSHA256 != digest([]byte(result.Note)) {
+	if result.ID != id || len(result.Note) > MaxDocumentBytes || !projectionDigestPattern.MatchString(result.StateID) || !projectionDigestPattern.MatchString(result.NoteSHA256) || result.NoteSHA256 != digest([]byte(result.Note)) {
 		return CurrentNote{}, errors.New("todo_remote_invalid_response")
 	}
 	return result, nil

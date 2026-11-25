@@ -135,7 +135,15 @@ pub fn read(path: &Path) -> Result<Value, Error> {
         e => e,
     })
 }
-/// Preserve immutable history bytes for independent digest validation.
+/// Read the capacity input while the caller holds the existing byte lock.
+pub fn read_capacity_after_lock(path: &Path) -> Result<Value, Error> {
+    match crate::todo_remote::verified_capacity_cache_after_lock(path)? {
+        Some(bytes) => parse(&bytes),
+        None => read_bounded(path, MAX_BYTES),
+    }
+}
+
+/// Read bounded original bytes for independent digest validation.
 pub fn read_bytes(path: &Path) -> Result<Vec<u8>, Error> {
     let mut bytes = Vec::new();
     File::open(path)
@@ -163,7 +171,11 @@ fn read_from_limit(reader: impl Read, limit: usize) -> Result<Value, Error> {
     if bytes.len() > limit {
         return Err(Error::TooLarge);
     }
-    let bytes = bytes.strip_prefix(&[0xef, 0xbb, 0xbf]).unwrap_or(&bytes);
+    parse(&bytes)
+}
+
+fn parse(bytes: &[u8]) -> Result<Value, Error> {
+    let bytes = bytes.strip_prefix(&[0xef, 0xbb, 0xbf]).unwrap_or(bytes);
     serde_json::from_slice(bytes).map_err(Error::InvalidJson)
 }
 

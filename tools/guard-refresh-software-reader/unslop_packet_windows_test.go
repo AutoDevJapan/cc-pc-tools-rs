@@ -10,6 +10,29 @@ import (
 	"testing"
 )
 
+func TestUnslopPurposeRoutesDurableCaptureAndSaveFailureJSON(t *testing.T) {
+	for _,mode:=range []string{"normal","late-provider-close","save-failure","nil-controller"} {
+		t.Run(mode,func(t *testing.T){
+			store:=newDurableTestStore(t)
+			controller,session,pending,_:=newDurableTestCapture(t,store,mode)
+			if mode=="save-failure" {durableTestFailPhase(store,"final")}
+			runtime:=unslopPurposeRuntime{durableCapture:controller}
+			if mode=="nil-controller" {runtime.durableCapture=nil}
+			var out bytes.Buffer
+			code:=runUnslopPurpose(context.Background(),[]string{"--capture-unslop-release"},&out,runtime)
+			var value map[string]any
+			if json.Unmarshal(out.Bytes(),&value)!=nil {t.Fatal("capture result was not returned as JSON",out.String())}
+			want:=1;if mode=="normal" {want=0}
+			if code!=want {t.Fatal("durable route exit contract",mode,code,out.String())}
+			if mode=="nil-controller" {if value["reason"]!="missing_producer_provenance"||session.builds!=0||pending.commits!=0 {t.Fatal("nil durable controller activated capture")};return}
+			if value["generation"]==""||value["receipt_published"]!=true||value["result_saved"]!=(mode!="save-failure")||value["qualified"]!=(mode=="normal") {t.Fatal("durable state did not reach CLI consumer",mode,out.String())}
+			if mode=="late-provider-close"&&value["toolchain_cleanup_failed"]!=true {t.Fatal("CLI erased late provider cleanup")}
+			if mode!="normal" {if _,ok:=value["receipt"];ok {t.Fatal("failure JSON returned a usable receipt")}}
+			if session.builds!=1||pending.commits!=1||strings.Contains(out.String(),"private") {t.Fatal("route repeated capture or exposed error detail")}
+		})
+	}
+}
+
 func TestUnslopPacketProjectsOnlyBoundInputsAndGeneratedText(t *testing.T) {
 	for _, fault := range []string{"normal", "sensitive_context", "missing_provider", "wrong_origin", "duplicate_case", "failed_generation", "missing_thread", "wrong_input_sha", "changed_response", "same_hash_new_identity", "reader_failure", "cancelled"} {
 		t.Run(fault, func(t *testing.T) {

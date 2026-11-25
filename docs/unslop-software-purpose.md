@@ -29,7 +29,7 @@
 
 | 段階 | 正常なproviderが行うこと | 不足した場合 |
 | --- | --- | --- |
-| `Before` | 固定commitの10ファイルをGit blobと保持バッファで照合する。埋込みSkillも含める。Cargo.lockで確認した依存、使用する設定、toolchain、namespaceのidentityも記録する | ビルドを始めない |
+| `Before` | 固定commitの11ファイルをGit blobと保持バッファで照合する。`.gitattributes` と埋込みSkillも含める。Cargo.lockで確認した依存、使用する設定、toolchain、namespaceのidentityも記録する | ビルドを始めない |
 | `Build` | 共有ゲートを使い、固定コマンドを1回だけ実行する。新namespace、オフラインの依存、Cargo JSON、元の実call、子プロセスの開始・Job割当・終了・回収を結ぶ | 成果物を開かない |
 | `After` | 同じ保持ファイルとnamespaceを再確認する。ファイルの追加、内容・identity・設定・依存の変化を確認する | 成果物を配布しない |
 | `WithArtifact` | Cargoが報告した新しい実行物と、その許されたaliasを保持する。後続へ渡すのは、確認した同じバッファだけにする | 配布記録を発行しない |
@@ -110,8 +110,13 @@ verify・prepare・packet読取は、不足理由を返す状態を保ってい�
 nativeの履歴接続候補では、正常なlauncherと現在のWindowsアカウントを使ってapp-serverへ接続する。
 `initialize` と履歴のread/listだけを送り、新しい生成turnやresumeは要求しない。
 元のthread・turn・command itemの対応が取得できなければ、接続できたことだけでpacketを読む資格を作らない。
-現在の有限batch方式は、実metadata読取で必要な応答がそろわず、接続成功の受入を満たしていない。
-初期化への応答を確認してから次の読取要求を送る具体的な有限protocolは、値の構築と正負のテストまで用意し、共有の実行処理への接続を残している。
+以前の一括stdin方式は、実metadata読取で必要な応答がそろわず失敗した。
+今回の候補は、固定Stepsを共有実行処理へ渡し、初期化と各読取要求の応答IDを同じ子のstdoutで確認してから次の入力へ進む。
+最後の応答後にstdinを閉じ、stdout・stderrと子全体の回収を確認する。
+IDを持たない通知は32件までstepを進めずに消費する。
+未知・重複ID、対応していないサーバー要求、エラー、不完全な応答、上限超過では固定理由で失敗させ、元の本文や秘密を理由に含めない。
+ソースと合成テストを用意した段階であり、この候補の実行結果と実履歴の取得成功は未確認である。
+通常のselector・履歴providerと元の出所照合は未接続のままにする。
 接続失敗を、元packet本文の解放や別経路の読取で補わない。
 
 既存の `softwareBuildSourceMatches`、`runSoftwareBuildWorker`、`withSoftwareBuildOutput`、`softwareBuildCompletionMatches`、`writeSoftwareBuildReceiptContext` を、native側の保持・ACK・終了回収・非上書きreceipt発行の接続元として使う。

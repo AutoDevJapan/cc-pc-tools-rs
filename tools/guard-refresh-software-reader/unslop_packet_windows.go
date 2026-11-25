@@ -265,6 +265,7 @@ type unslopOriginInspection struct {
 
 type unslopPurposeRuntime struct {
 	capture        unslopCaptureAccess
+	durableCapture *unslopDurableController
 	packet         unslopPacketAccess
 	history        unslopHistoryRPC
 	historyThreads [2]string
@@ -280,6 +281,12 @@ func runUnslopPurpose(ctx context.Context, args []string, out io.Writer, runtime
 	qualified := false
 	switch args[0] {
 	case "--capture-unslop-release":
+		if runtime.durableCapture!=nil {
+			r:=runtime.durableCapture.Capture(ctx)
+			value=r
+			qualified=r.Qualified&&r.ResultSaved
+			break
+		}
 		r := captureUnslopRelease(ctx, runtime.capture)
 		value = r
 		qualified = r.Qualified

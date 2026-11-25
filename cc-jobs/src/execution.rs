@@ -90,6 +90,7 @@ impl Context {
     /// The exact builder used by supervise_attempt. Inventory failure returns
     /// before spawning; no browser bridge is exposed to an isolated worker.
     pub fn execution_spawn(&self, job: &Value) -> Result<Spawn> {
+        crate::fixed_unslop_capture::reject_model_route(job)?;
         let profile = Profile::of(job);
         let research_policy = self.research_policy(job)?;
         let prompt = self.prompt_for_attempt(job)?;

@@ -496,6 +496,9 @@ impl Context {
         out: &mut dyn Write,
         err: &mut dyn Write,
     ) -> Result<i32> {
+        if crate::fixed_unslop_capture::handles(args) {
+            return crate::fixed_unslop_capture::dispatch(args, out);
+        }
         if args.iter().any(|s| s == "--help" || s == "-h") {
             out.write_all(help_text(args.first().map(String::as_str).unwrap_or("")).as_bytes())?;
             return Ok(0);

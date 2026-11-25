@@ -29,7 +29,7 @@
 
 | 段階 | 正常なproviderが行うこと | 不足した場合 |
 | --- | --- | --- |
-| `Before` | 固定commitの10ファイルをGit blobと保持バッファで照合する。埋込みSkillも含める。Cargo.lockで確認した依存、使用する設定、toolchain、namespaceのidentityも記録する | ビルドを始めない |
+| `Before` | 固定commitの11ファイルをGit blobと保持バッファで照合する。`.gitattributes` と埋込みSkillも含める。Cargo.lockで確認した依存、使用する設定、toolchain、namespaceのidentityも記録する | ビルドを始めない |
 | `Build` | 共有ゲートを使い、固定コマンドを1回だけ実行する。新namespace、オフラインの依存、Cargo JSON、元の実call、子プロセスの開始・Job割当・終了・回収を結ぶ | 成果物を開かない |
 | `After` | 同じ保持ファイルとnamespaceを再確認する。ファイルの追加、内容・identity・設定・依存の変化を確認する | 成果物を配布しない |
 | `WithArtifact` | Cargoが報告した新しい実行物と、その許されたaliasを保持する。後続へ渡すのは、確認した同じバッファだけにする | 配布記録を発行しない |

@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::{
     collections::HashMap,
-    fs::{self, OpenOptions},
+    fs::{self, File, OpenOptions},
     io::{self, BufRead, BufReader, Read, Write},
     path::{Path, PathBuf},
     process::{Child, ChildStdin, Command, Stdio},
@@ -121,6 +121,7 @@ pub struct CurrentNote {
 enum ReplyKind {
     Control,
     CurrentNote,
+    CapacityVersion,
 }
 
 #[derive(Deserialize)]
@@ -133,7 +134,7 @@ struct NoteSuccess {
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-struct NoteFailure {
+struct ReadFailure {
     ok: bool,
     error: String,
 }
@@ -142,12 +143,34 @@ struct NoteFailure {
 #[serde(untagged)]
 enum NoteReply {
     Success(NoteSuccess),
-    Failure(NoteFailure),
+    Failure(ReadFailure),
 }
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct CacheVersion {
+    revision: u64,
+    state_id: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct VersionSuccess {
+    ok: bool,
+    version: CacheVersion,
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum VersionReply {
+    Success(VersionSuccess),
+    Failure(ReadFailure),
+}
+
 impl ReplyKind {
     fn limit(self) -> usize {
         match self {
-            Self::Control => 4096,
+            Self::Control | Self::CapacityVersion => 4096,
             Self::CurrentNote => 6 * crate::todo_store::MAX_BYTES + 8192,
         }
     }
@@ -159,6 +182,9 @@ fn read_bridge_reply(reader: &mut impl BufRead, kind: ReplyKind) -> io::Result<O
     match reader.take(limit as u64 + 1).read_until(b'\n', &mut line) {
         Ok(0) => Ok(None),
         Ok(_) if line.len() <= limit => {
+            if matches!(kind, ReplyKind::CapacityVersion) && !line.ends_with(b"\n") {
+                return Err(error("todo_remote_invalid_control_reply"));
+            }
             let reply = match kind {
                 ReplyKind::Control => serde_json::from_slice(&line),
                 ReplyKind::CurrentNote => {
@@ -170,6 +196,19 @@ fn read_bridge_reply(reader: &mut impl BufRead, kind: ReplyKind) -> io::Result<O
                             Ok(json!({"ok":false,"error":reply.error}))
                         }
                         _ => Err(serde::de::Error::custom("inconsistent note reply")),
+                    })
+                }
+                ReplyKind::CapacityVersion => {
+                    serde_json::from_slice::<VersionReply>(&line).and_then(|reply| match reply {
+                        VersionReply::Success(reply)
+                            if reply.ok && valid_digest(&reply.version.state_id) =>
+                        {
+                            Ok(json!({"ok":true,"version":reply.version}))
+                        }
+                        VersionReply::Failure(reply) if !reply.ok && !reply.error.is_empty() => {
+                            Ok(json!({"ok":false,"error":reply.error}))
+                        }
+                        _ => Err(serde::de::Error::custom("inconsistent version reply")),
                     })
                 }
             };
@@ -203,11 +242,6 @@ pub fn current_note_after_lock(path: &Path, id: i64) -> io::Result<Option<Curren
             .ok_or_else(|| error("todo_remote_invalid_control_reply"))?,
     )
     .map_err(|_| error("todo_remote_invalid_control_reply"))?;
-    let valid_digest = |s: &str| {
-        s.len() == 64
-            && s.bytes()
-                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
-    };
     if projection.id != id
         || projection.note.len() > crate::todo_store::MAX_BYTES
         || !valid_digest(&projection.state_id)
@@ -217,6 +251,141 @@ pub fn current_note_after_lock(path: &Path, id: i64) -> io::Result<Option<Curren
         return Err(error("todo_remote_invalid_control_reply"));
     }
     Ok(Some(projection))
+}
+
+fn valid_digest(value: &str) -> bool {
+    value.len() == 64
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct CacheRevision {
+    revision: u64,
+    state_id: String,
+    sha256: String,
+    bytes: u64,
+}
+
+/// The caller holds todo.lock. Return the same cache bytes verified against
+/// the cloud version, or None when the store has never enabled cloud sync.
+pub(crate) fn verified_capacity_cache_after_lock(
+    path: &Path,
+) -> Result<Option<Vec<u8>>, crate::todo_store::Error> {
+    use crate::todo_store::Error;
+
+    if !is_store(path) {
+        return Ok(None);
+    }
+    if ["todo.json.remote-pending", "todo.json.remote-invalid"]
+        .iter()
+        .any(|name| !marker_absent(&path.with_file_name(name)))
+    {
+        return Err(Error::Io(error("todo_remote_cache_revision_mismatch")));
+    }
+
+    let Some(cfg) = settings(path).map_err(Error::Io)? else {
+        // Do not use the local path if a dangling activation or revision
+        // marker was treated as absent when settings followed it.
+        if ["todo.remote.json", "todo.json.remote-revision"]
+            .iter()
+            .any(|name| !marker_absent(&path.with_file_name(name)))
+        {
+            return Err(Error::Io(error("todo_remote_activation_marker_missing")));
+        }
+        return Ok(None);
+    };
+    let absolute = std::path::absolute(path).map_err(Error::Io)?;
+    let mut cache = absolute
+        .parent()
+        .ok_or_else(|| Error::Io(error("todo_remote_cache_unavailable")))?
+        .canonicalize()
+        .map_err(|_| Error::Io(error("todo_remote_cache_unavailable")))?;
+    cache.push("todo.json");
+    verify_capacity_cache(&cache, || capacity_version(&cfg, &cache)).map(Some)
+}
+
+fn marker_absent(path: &Path) -> bool {
+    matches!(fs::symlink_metadata(path), Err(err) if err.kind() == io::ErrorKind::NotFound)
+}
+
+// The byte lock keeps the sidecar and cache stable while the server supplies
+// the observation point. No server lease is needed to read that snapshot.
+fn verify_capacity_cache(
+    path: &Path,
+    version: impl FnOnce() -> io::Result<CacheVersion>,
+) -> Result<Vec<u8>, crate::todo_store::Error> {
+    use crate::todo_store::{self, Error};
+    use sha2::{Digest, Sha256};
+
+    let mismatch = || Error::Io(error("todo_remote_cache_revision_mismatch"));
+    let cache_io = |err: io::Error| {
+        if err.kind() == io::ErrorKind::NotFound {
+            Error::Io(error("todo_remote_cache_unavailable"))
+        } else {
+            Error::Io(err)
+        }
+    };
+    let mut sidecar = Vec::new();
+    File::open(path.with_file_name("todo.json.remote-revision"))
+        .map_err(cache_io)?
+        .take(4097)
+        .read_to_end(&mut sidecar)
+        .map_err(Error::Io)?;
+    if sidecar.len() > 4096 {
+        return Err(mismatch());
+    }
+    let cache: CacheRevision = serde_json::from_slice(&sidecar).map_err(|_| mismatch())?;
+    if !valid_digest(&cache.state_id)
+        || !valid_digest(&cache.sha256)
+        || cache.bytes == 0
+        || cache.bytes > todo_store::MAX_BYTES as u64
+    {
+        return Err(mismatch());
+    }
+
+    let remote = version().map_err(Error::Io)?;
+    if cache.revision != remote.revision || cache.state_id != remote.state_id {
+        return Err(mismatch());
+    }
+    let bytes = todo_store::read_bytes(path).map_err(|err| match err {
+        Error::Io(err) => cache_io(err),
+        other => other,
+    })?;
+    if bytes.len() as u64 != cache.bytes || format!("{:x}", Sha256::digest(&bytes)) != cache.sha256 {
+        return Err(mismatch());
+    }
+    Ok(bytes)
+}
+
+fn capacity_version(cfg: &Settings, path: &Path) -> io::Result<CacheVersion> {
+    let mut bridge = Bridge::spawn_with_reply_kind(cfg, ReplyKind::CapacityVersion)?;
+    let request = json!({"op":"capacity-version","cachePath":path});
+    let mut input = bridge
+        .input
+        .take()
+        .ok_or_else(|| error("todo_remote_bridge_closed"))?;
+    // Keep the deadline effective even if the child stops reading stdin.
+    // Closing the pipe after this frame prevents another operation on it.
+    let writer = thread::Builder::new()
+        .spawn(move || Bridge::send(&mut input, request))
+        .map_err(|_| error("todo_remote_bridge_write_failed"))?;
+    let reply = bridge.receive(Duration::from_secs(30));
+    let clean_exit = bridge.close();
+    writer
+        .join()
+        .map_err(|_| error("todo_remote_bridge_write_failed"))??;
+    let reply = reply?;
+    if !clean_exit {
+        return Err(error("todo_remote_bridge_unavailable"));
+    }
+    if !matches!(bridge.replies.try_recv(), Err(mpsc::TryRecvError::Disconnected)) {
+        return Err(error("todo_remote_invalid_control_reply"));
+    }
+    serde_json::from_value(reply["version"].clone())
+        .map_err(|_| error("todo_remote_invalid_control_reply"))
 }
 
 type Shared = Arc<Mutex<Bridge>>;
@@ -365,13 +534,16 @@ impl Bridge {
             .spawn()
             .map_err(|_| error("todo_remote_bridge_start_failed"))?;
         let input = child.stdin.take();
-        let stdout = child
-            .stdout
-            .take()
-            .ok_or_else(|| error("todo_remote_bridge_pipe_failed"))?;
+        let Some(stdout) = child.stdout.take() else {
+            drop(input);
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(error("todo_remote_bridge_pipe_failed"));
+        };
         let (send, replies) = mpsc::channel();
-        let reader = thread::spawn(move || {
+        let reader = thread::Builder::new().spawn(move || {
             let mut stdout = BufReader::new(stdout);
+            let mut received_version = false;
             loop {
                 let result = match read_bridge_reply(&mut stdout, kind) {
                     Ok(None) => break,
@@ -379,11 +551,23 @@ impl Bridge {
                     Err(failure) => Err(failure),
                 };
                 let failed = result.is_err();
-                if send.send(result).is_err() || failed {
+                if send.send(result).is_err() || failed || received_version {
                     break;
                 }
+                // A one-shot reply may have a second frame only as evidence
+                // of a protocol error. Do not keep buffering extra frames.
+                received_version = matches!(kind, ReplyKind::CapacityVersion);
             }
         });
+        let reader = match reader {
+            Ok(reader) => reader,
+            Err(_) => {
+                drop(input);
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err(error("todo_remote_bridge_pipe_failed"));
+            }
+        };
         Ok(Self {
             child,
             input,
@@ -429,12 +613,18 @@ impl Bridge {
             .input
             .as_mut()
             .ok_or_else(|| error("todo_remote_bridge_closed"))?;
+        Self::send(input, request)?;
+        self.receive(timeout)
+    }
+    fn send(input: &mut ChildStdin, request: Value) -> io::Result<()> {
         serde_json::to_writer(&mut *input, &request)
             .map_err(|_| error("todo_remote_bridge_write_failed"))?;
         input
             .write_all(b"\n")
             .and_then(|_| input.flush())
-            .map_err(|_| error("todo_remote_bridge_write_failed"))?;
+            .map_err(|_| error("todo_remote_bridge_write_failed"))
+    }
+    fn receive(&self, timeout: Duration) -> io::Result<Value> {
         let reply = self
             .replies
             .recv_timeout(timeout)
@@ -471,29 +661,28 @@ impl Bridge {
         }
         Ok(reply)
     }
-    fn close(&mut self) {
+    fn close(&mut self) -> bool {
         if self.closed {
-            return;
+            return false;
         }
         self.closed = true;
         // EOF also asks the bridge to release its lease, even after a failed
         // operation. Keep the byte lock until that process has exited.
         self.input.take();
         let deadline = Instant::now() + Duration::from_secs(5);
-        loop {
+        let clean_exit = loop {
             match self.child.try_wait() {
-                Ok(Some(_)) => break,
+                Ok(Some(status)) => break status.success(),
                 _ if Instant::now() < deadline => thread::sleep(Duration::from_millis(10)),
                 _ => {
                     let _ = self.child.kill();
                     let _ = self.child.wait();
-                    break;
+                    break false;
                 }
             }
-        }
-        if let Some(reader) = self.reader.take() {
-            let _ = reader.join();
-        }
+        };
+        let reader_joined = self.reader.take().is_some_and(|reader| reader.join().is_ok());
+        clean_exit && reader_joined
     }
 }
 impl Drop for Bridge {
@@ -569,6 +758,81 @@ mod tests {
         .unwrap()
         .unwrap();
         assert_eq!(reply["revision"], 2);
+    }
+
+    #[test]
+    fn capacity_version_requires_one_explicit_identity_and_newline() {
+        let state = "a".repeat(64);
+        let frame = format!("{{\"ok\":true,\"version\":{{\"revision\":0,\"stateId\":\"{state}\"}}}}\n");
+        let reply = read_bridge_reply(&mut std::io::Cursor::new(&frame), ReplyKind::CapacityVersion)
+            .unwrap()
+            .unwrap();
+        assert_eq!(reply["version"]["revision"], 0);
+        for malformed in [
+            frame.trim_end().to_string(),
+            frame.replace("\"revision\":0,", ""),
+            frame.replace("\"revision\":0", "\"revision\":null"),
+            frame.replace("\"revision\":0", "\"revision\":\"0\""),
+            frame.replace("\"revision\":0", "\"revision\":1,\"revision\":0"),
+            frame.replace("\"revision\":0", "\"Revision\":0"),
+            frame.replace("\"revision\":0", "\"revision\":18446744073709551616"),
+            frame.replace(state.as_str(), ""),
+            frame.replace("\"ok\":true", "\"ok\":false"),
+            frame.replace("\"ok\":true", "\"ok\":true,\"error\":\"unexpected\""),
+            frame.replace('\n', "{}\n"),
+        ] {
+            assert!(
+                read_bridge_reply(&mut std::io::Cursor::new(malformed), ReplyKind::CapacityVersion).is_err()
+            );
+        }
+    }
+
+    #[test]
+    fn capacity_cache_accepts_only_the_matching_verified_buffer() {
+        use sha2::{Digest, Sha256};
+
+        let home = tempfile::tempdir().unwrap();
+        let path = home.path().join("todo.json");
+        let sidecar = home.path().join("todo.json.remote-revision");
+        let source = b"\xef\xbb\xbf{\"items\":[]}";
+        let state = "a".repeat(64);
+        fs::write(&path, source).unwrap();
+        let mut metadata = json!({
+            "revision": 9007199254740993u64,
+            "stateId": state,
+            "sha256": format!("{:x}", Sha256::digest(source)),
+            "bytes": source.len(),
+        });
+        let revision = 9007199254740993;
+        let version = || Ok(CacheVersion { revision, state_id: state.clone() });
+        fs::write(&sidecar, metadata.to_string()).unwrap();
+        assert_eq!(verify_capacity_cache(&path, version).unwrap().as_slice(), source);
+        let mismatch = verify_capacity_cache(&path, || Ok(CacheVersion {
+            revision,
+            state_id: "b".repeat(64),
+        })).unwrap_err();
+        assert!(mismatch.to_string().contains("todo_remote_cache_revision_mismatch"));
+        metadata.as_object_mut().unwrap().remove("bytes");
+        fs::write(&sidecar, metadata.to_string()).unwrap();
+        assert!(
+            verify_capacity_cache(&path, || panic!("invalid metadata reached the bridge")).is_err()
+        );
+        assert_eq!(fs::read(&path).unwrap(), source);
+    }
+
+    #[test]
+    fn capacity_cache_pending_or_invalid_never_enters_local_mode() {
+        let home = tempfile::tempdir().unwrap();
+        let path = home.path().join("todo.json");
+        assert!(verified_capacity_cache_after_lock(&path).unwrap().is_none());
+
+        for name in ["todo.json.remote-pending", "todo.json.remote-invalid", "todo.json.remote-revision"] {
+            let marker = home.path().join(name);
+            fs::write(&marker, b"not read as data").unwrap();
+            assert!(verified_capacity_cache_after_lock(&path).is_err());
+            assert_eq!(fs::read(&marker).unwrap(), b"not read as data");
+            fs::remove_file(&marker).unwrap();
+        }
     }
 
     #[test]

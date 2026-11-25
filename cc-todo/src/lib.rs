@@ -466,27 +466,36 @@ pub fn now() -> String {
 pub struct Lock(File, Option<cc_job_policy::todo_remote::Guard>);
 impl Lock {
     pub fn acquire(path: &Path, timeout: Duration) -> Result<Self> {
-        Self::acquire_inner(path, timeout, true)
+        let mut lock = Self::acquire_local(path, timeout)?;
+        lock.1 = cc_job_policy::todo_remote::Guard::after_lock(path).map_err(err)?;
+        Ok(lock)
     }
     fn acquire_local(path: &Path, timeout: Duration) -> Result<Self> {
-        Self::acquire_inner(path, timeout, false)
-    }
-    fn acquire_inner(path: &Path, timeout: Duration, remote: bool) -> Result<Self> {
         let file = OpenOptions::new()
             .create(true)
             .append(true)
             .read(true)
             .open(path)
             .map_err(err)?;
+        Self::acquire_file(file, timeout)
+    }
+    // Keep the lock's name pinned while holding the same byte as the writers.
+    fn acquire_existing(path: &Path, timeout: Duration) -> Result<Self> {
+        use std::os::windows::fs::OpenOptionsExt;
+        use windows_sys::Win32::Storage::FileSystem::{FILE_SHARE_READ, FILE_SHARE_WRITE};
+
+        let file = OpenOptions::new()
+            .read(true)
+            .share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE)
+            .open(path)
+            .map_err(err)?;
+        Self::acquire_file(file, timeout)
+    }
+    fn acquire_file(file: File, timeout: Duration) -> Result<Self> {
         let deadline = Instant::now() + timeout;
         loop {
             if platform::lock(&file) {
-                let guard = if remote {
-                    cc_job_policy::todo_remote::Guard::after_lock(path).map_err(err)?
-                } else {
-                    None
-                };
-                return Ok(Self(file, guard));
+                return Ok(Self(file, None));
             }
             if Instant::now() >= deadline {
                 return Err("todo.lock is busy".into());
@@ -1631,6 +1640,12 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
     Ok(output)
 }
 pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
+    if matches!(&cli.command, Command::CapacityStatus) {
+        let _lock = Lock::acquire_existing(&paths.lock, Duration::from_secs(30))?;
+        let db = cc_job_policy::todo_store::read_capacity_after_lock(&paths.store).map_err(err)?;
+        println!("{}", capacity_cycle::status(&db)?);
+        return Ok(());
+    }
     if let Command::CurrentNote { id } = &cli.command {
         use sha2::{Digest, Sha256};
         let _lock = Lock::acquire_local(&paths.lock, Duration::from_secs(30))?;
@@ -1730,7 +1745,6 @@ pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
     if matches!(
         cli.command,
         Command::List { .. }
-            | Command::CapacityStatus
             | Command::RenameProject { dry_run: true, .. }
             | Command::History { .. }
             | Command::ArchiveHistory { apply: false, .. }
@@ -1884,3 +1898,39 @@ pub mod job_refs;
 mod platform;
 pub mod recovery;
 pub mod summary;
+
+#[cfg(test)]
+mod capacity_lock_tests {
+    use std::{fs, os::windows::io::AsRawHandle, time::Duration};
+    use windows_sys::Win32::{
+        Storage::FileSystem::{LOCKFILE_EXCLUSIVE_LOCK, LOCKFILE_FAIL_IMMEDIATELY, LockFileEx, UnlockFileEx},
+        System::IO::OVERLAPPED,
+    };
+
+    #[test]
+    fn capacity_reader_contends_on_the_writers_byte_and_releases_it() {
+        let home = tempfile::tempdir().unwrap();
+        let path = home.path().join("todo.lock");
+        let writer = fs::File::create(&path).unwrap();
+        let mut offset = unsafe { std::mem::zeroed::<OVERLAPPED>() };
+        let try_lock_writer = |offset: &mut OVERLAPPED| unsafe {
+            LockFileEx(
+                writer.as_raw_handle(),
+                LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY,
+                0,
+                1,
+                0,
+                offset,
+            )
+        };
+        assert_ne!(try_lock_writer(&mut offset), 0);
+        assert!(super::Lock::acquire_existing(&path, Duration::ZERO).is_err());
+        assert_ne!(unsafe { UnlockFileEx(writer.as_raw_handle(), 0, 1, 0, &mut offset) }, 0);
+
+        let read_lock = super::Lock::acquire_existing(&path, Duration::ZERO).unwrap();
+        assert_eq!(try_lock_writer(&mut offset), 0);
+        drop(read_lock);
+        assert_ne!(try_lock_writer(&mut offset), 0);
+        assert_ne!(unsafe { UnlockFileEx(writer.as_raw_handle(), 0, 1, 0, &mut offset) }, 0);
+    }
+}

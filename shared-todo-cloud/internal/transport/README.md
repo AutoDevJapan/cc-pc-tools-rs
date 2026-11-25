@@ -54,6 +54,14 @@ types and failed reads return an error without a cache fallback. Only this
 exchange accepts the bounded larger reply needed for a note; ordinary control
 replies keep their 4 KiB limit. Upgrade the server, bridge, then CLI before use.
 
+`capacity-version` is a one-shot control frame with the same `cachePath`.
+The Rust caller holds the existing byte lock. The bridge uses the installed
+configuration to make one authenticated `GET /api/v1/version` and returns
+`version: {revision, stateId}` in its reply. A missing or malformed version
+fails. The Rust caller checks the sidecar and the exact bytes of its local
+cache before reading the capacity decision. This operation does not acquire
+a lease, fetch a snapshot, resolve pending writes, or refresh the cache.
+
 One `watch --config <path>` process per cache can pull browser changes every five
 seconds. Its own OS lock prevents duplicate watchers. `sync --config <path>` runs
 one pull. Both use the legacy byte lock; ordinary readers only read the shared

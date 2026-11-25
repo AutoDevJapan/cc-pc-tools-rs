@@ -23,10 +23,11 @@ type bridgeResponse struct {
 	Revision    uint64       `json:"revision,omitempty"`
 	Error       string       `json:"error,omitempty"`
 	CurrentNote *CurrentNote `json:"currentNote,omitempty"`
+	Version     *Version     `json:"version,omitempty"`
 }
 
-// Serve keeps snapshots and candidates on disk. A current-note read returns
-// its bounded single-item projection on the dedicated control exchange.
+// Serve keeps snapshots and candidates on disk. One-shot readers use
+// the existing authenticated connection without opening a writer session.
 // EOF, including a dead Rust parent, releases the lease via the same defer.
 func Serve(ctx context.Context, cfg Config, in io.Reader, out io.Writer) error {
 	if err := requireActivation(cfg); err != nil {
@@ -45,15 +46,31 @@ func Serve(ctx context.Context, cfg Config, in io.Reader, out io.Writer) error {
 		}
 	}()
 	for {
-		var req bridgeRequest
-		if err = dec.Decode(&req); err == io.EOF {
+		var frame json.RawMessage
+		if err = dec.Decode(&frame); err == io.EOF {
 			return nil
 		} else if err != nil {
 			return errors.New("todo_remote_invalid_control_frame")
 		}
+		var req bridgeRequest
+		if json.Unmarshal(frame, &req) != nil {
+			return errors.New("todo_remote_invalid_control_frame")
+		}
 		var revision uint64
 		var note *CurrentNote
+		var version *Version
 		switch req.Op {
+		case "capacity-version":
+			_, frameErr := readProjectionFields(frame, "op", "cachePath")
+			if frameErr != nil || session != nil || !samePath(req.CachePath, cfg.CachePath) {
+				err = errors.New("todo_remote_invalid_control_frame")
+				break
+			}
+			var observed Version
+			observed, err = client.capacityVersion(ctx)
+			if err == nil {
+				version = &observed
+			}
 		case "current-note":
 			if session != nil || req.ItemID <= 0 || !samePath(req.CachePath, cfg.CachePath) || req.DocumentPath != "" {
 				err = errors.New("todo_remote_invalid_note_request")
@@ -99,14 +116,14 @@ func Serve(ctx context.Context, cfg Config, in io.Reader, out io.Writer) error {
 		default:
 			err = errors.New("todo_remote_unknown_operation")
 		}
-		resp := bridgeResponse{OK: err == nil, Revision: revision, CurrentNote: note}
+		resp := bridgeResponse{OK: err == nil, Revision: revision, CurrentNote: note, Version: version}
 		if err != nil {
 			resp.Error = err.Error()
 		}
 		if encodeErr := enc.Encode(resp); encodeErr != nil {
 			return errors.New("todo_remote_control_write_failed")
 		}
-		if req.Op == "close" || req.Op == "current-note" || err != nil {
+		if req.Op == "close" || req.Op == "current-note" || req.Op == "capacity-version" || err != nil {
 			return nil
 		}
 	}

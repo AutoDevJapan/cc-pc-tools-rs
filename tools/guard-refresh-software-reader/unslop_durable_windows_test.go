@@ -657,3 +657,47 @@ func TestUnslopDurableOwnedBeginFailureKeepsReturnedSession(t *testing.T) {
 		})
 	}
 }
+
+func TestUnslopPreviousCaptureMetadataSurvivesSourceUpdate(t *testing.T) {
+	ctx := context.Background()
+	store := newDurableTestStore(t)
+	generation := strings.Repeat("e", 32)
+	if err := store.reserve(generation); err != nil {
+		t.Fatal(err)
+	}
+	old := unslopDurableEvent{
+		Domain: unslopDurableDomain, Kind: "started", Generation: generation, Sequence: 1,
+		Source:     "0c12029d1a383f406bd0bdbf87d40bc2af1b1279",
+		CommandSHA: "e5cd17481b074394ec9eaee4bb177f2fc05a1093dc7847daffe173ae618d2293",
+	}
+	first, err := json.Marshal(old)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.put(ctx, generation, 1, first); err != nil {
+		t.Fatal(err)
+	}
+	recovery, err := store.Recover(ctx, generation)
+	if err != nil || recovery.State != "durable_recovery_incomplete" || recovery.Qualified || recovery.DataAccessGranted || recovery.ReceiptPublished {
+		t.Fatal("previous record did not remain readable as metadata", recovery, err)
+	}
+	j := &unslopDurableJournal{store: store, generation: generation}
+	if err := j.load(); !errors.Is(err, errUnslopDurableConflict) {
+		t.Fatal("live journal accepted a retired source", err)
+	}
+	mixed := unslopDurableEvent{
+		Domain: unslopDurableDomain, Kind: "binding", Generation: generation, Sequence: 2,
+		PreviousSHA: digest(first), BindingSHA: strings.Repeat("a", 64),
+		Source: unslopCaptureSource, CommandSHA: fixedUnslopToolchainPurpose().CommandSHA,
+	}
+	second, err := json.Marshal(mixed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.put(ctx, generation, 2, second); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.Recover(ctx, generation); !errors.Is(err, errUnslopDurableConflict) {
+		t.Fatal("generation mixed two capture sources", err)
+	}
+}

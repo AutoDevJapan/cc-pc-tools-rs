@@ -209,24 +209,25 @@ func executeUnslopReleasePlan(ctx context.Context, prepare bool, plan unslopRele
 	return result
 }
 
-const unslopCaptureSource = "0c12029d1a383f406bd0bdbf87d40bc2af1b1279"
-const unslopCaptureTree = "b1888c01a2710fd4a47c88f171e08139da908fde"
+const unslopCaptureSource = "cb98dee1554f69e7bb2a0ca62b48834eadca895c"
+const unslopCaptureTree = "2bf0d6322bd1a98bf4115d8f295eed631f50808e"
 const unslopCaptureDomain = "godd-unslop-captured-release-v1"
-const unslopCaptureRoot = unslopSourceRoot + "/target/unslop-captured-release-v1"
+const unslopCaptureRoot = unslopSourceRoot + "/target/unslop-captured-release-cb98dee1554f"
 const unslopCaptureOutput = unslopCaptureRoot + "/cargo/release/godd-unslop.exe"
 
 func unslopCaptureSourceBlobs() map[string]string {
 	return map[string]string{
+		".gitattributes":                         "3403225fd205479425d02934cc0ae8e1b8d873cb",
 		"Cargo.toml":                             "1066eed16fb9ca324f4359b8c7a09d6e570b3d4c",
 		"Cargo.lock":                             "6837c52b654881ab1e8a32486631a3434acd4738",
 		"src/lib.rs":                             "234cb4f5d804e9ece0bb1c59ffdec05e8a6cea10",
-		"src/main.rs":                            "dae4d56981b05c4511f39e4638ba34cfdedc5881",
+		"src/main.rs":                            "34db926315811692d13c39d1bd709649e55be3b8",
 		"src/relationships.rs":                   "3337013281256bc3dc6bc1913550218bd77de1cb",
 		"src/rewrite.rs":                         "c47aabc72ec5804712f06564de71de7c104c7141",
-		"src/rpc.rs":                             "7aab0b15b283e2ad727d4a7e5ec96903cdd3453d",
+		"src/rpc.rs":                             "a8dea21dd76523d288c1189488fa4b3ebbd3ed27",
 		"src/skill.rs":                           "e61886a7eec4cf565671689e607b9634e4524de2",
 		"src/style.rs":                           "716bf2ba1bade500dc74c00c0dd5baf3b4d012bd",
-		"docs/distribution/godd-unslop-SKILL.md": "697fd9503e9800d568f7062dfd6decb34fe9ef9b",
+		"docs/distribution/godd-unslop-SKILL.md": "922935f9494416d1cf3a9e10c4a6cf12d48ed4dd",
 	}
 }
 

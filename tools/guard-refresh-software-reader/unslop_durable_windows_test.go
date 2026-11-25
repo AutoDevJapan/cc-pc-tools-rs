@@ -701,3 +701,88 @@ func TestUnslopPreviousCaptureMetadataSurvivesSourceUpdate(t *testing.T) {
 		t.Fatal("generation mixed two capture sources", err)
 	}
 }
+
+func TestUnslopDurableReceiptCommandMatchesGeneration(t *testing.T) {
+	ctx := context.Background()
+	controller, _, _, _ := newDurableTestCapture(t, newDurableTestStore(t), "normal")
+	result := controller.Capture(ctx)
+	if !result.ResultSaved || !result.ReceiptPublished || !result.Qualified || result.Receipt == nil {
+		t.Fatal("missing complete synthetic capture", result)
+	}
+	current := fixedUnslopToolchainPurpose().CommandSHA
+	previous := unslopPreviousCommandSHA
+	const oldRoot = unslopSourceRoot + "/target/unslop-captured-release-v1"
+
+	t.Run("live-projection", func(t *testing.T) {
+		for _, complete := range []bool{false, true} {
+			r := *result.Receipt
+			r.ProducerAcknowledged, r.ProducerReaped = complete, complete
+			if _, err := unslopDurableReceiptOf(r); err != nil {
+				t.Fatalf("current receipt (complete=%t): %v", complete, err)
+			}
+			r.CommandSHA = previous
+			if receipt, err := unslopDurableReceiptOf(r); !errors.Is(err, errUnslopDurableConflict) || receipt != nil {
+				t.Fatalf("retired command projected for live capture (complete=%t): %v", complete, err)
+			}
+		}
+	})
+
+	for _, tc := range []struct {
+		name, source, root, command, receiptCommand string
+		wantOK                                      bool
+	}{
+		{"current", unslopCaptureSource, unslopCaptureRoot, current, current, true},
+		{"previous", unslopPreviousCaptureSource, oldRoot, previous, previous, true},
+		{"current-with-previous-receipt", unslopCaptureSource, unslopCaptureRoot, current, previous, false},
+		{"previous-with-current-receipt", unslopPreviousCaptureSource, oldRoot, previous, current, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			store := newDurableTestStore(t)
+			generation := controller.journal.generation
+			if err := store.reserve(generation); err != nil {
+				t.Fatal(err)
+			}
+			var previousSHA, sealedSHA string
+			for _, event := range controller.journal.events {
+				event.Source, event.CommandSHA, event.PreviousSHA = tc.source, tc.command, previousSHA
+				if event.Receipt != nil {
+					full := *result.Receipt
+					full.Source, full.Namespace, full.CommandSHA = tc.source, tc.root, tc.receiptCommand
+					full.ProducerAcknowledged, full.ProducerReaped = event.Receipt.Acknowledged, event.Receipt.Reaped
+					raw, err := json.Marshal(full)
+					if err != nil {
+						t.Fatal(err)
+					}
+					receipt := *event.Receipt
+					receipt.CommandSHA, receipt.SHA = full.CommandSHA, digest(raw)
+					event.Receipt = &receipt
+					if event.Kind == "sealed" {
+						sealedSHA = receipt.SHA
+					}
+					if got := event.validFor(tc.source, tc.command); got != tc.wantOK {
+						t.Errorf("%s accepted=%t; want %t", event.Kind, got, tc.wantOK)
+					}
+				}
+				// Recompute the complete chain so a bad predecessor cannot cause the rejection.
+				raw, err := json.Marshal(event)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := store.put(ctx, generation, event.Sequence, raw); err != nil {
+					t.Fatal(err)
+				}
+				previousSHA = digest(raw)
+			}
+			history, err := store.Recover(ctx, generation)
+			if !tc.wantOK {
+				if !errors.Is(err, errUnslopDurableConflict) || history.Capture != nil || history.ReceiptSHA != "" || history.ReceiptPublished || history.Qualified || history.DataAccessGranted {
+					t.Fatal("mixed receipt reported as recovered", history, err)
+				}
+				return
+			}
+			if err != nil || history.State != "durable_capture_result_saved" || !history.ReceiptPublished || history.Publication != "published" || sealedSHA == "" || history.ReceiptSHA != sealedSHA || history.Qualified || history.DataAccessGranted {
+				t.Fatal("complete history was not recovered as metadata", history, err)
+			}
+		})
+	}
+}

@@ -19,10 +19,31 @@ func TestUnslopCallerRootConsumesOnlyHeldStore(t *testing.T) {
 }
 
 func TestUnslopCallerRootNamespaceCannotUseCaptureNamespace(t *testing.T) {
-	for _,p:=range []string{unslopCaptureRoot,unslopCaptureRoot+"/journal",unslopCaptureRoot+"/source/journal"} {
-		if unslopCallerRootNamespace(p) {t.Fatal("journal accepted capture namespace",p)}
+	const oldRoot = unslopSourceRoot + "/target/unslop-captured-release-v1"
+	for _, tc := range []struct {
+		name, path string
+		separate   bool
+	}{
+		{"current", unslopCaptureRoot, false},
+		{"current-child", filepath.Join(unslopCaptureRoot, "journal"), false},
+		{"current-descendant", filepath.Join(unslopCaptureRoot, "source", "journal"), false},
+		{"previous", oldRoot, false},
+		{"previous-normalized", strings.ToUpper(filepath.FromSlash(oldRoot)) + `\`, false},
+		{"previous-child", filepath.Join(oldRoot, "journal"), false},
+		{"previous-descendant", filepath.Join(oldRoot, "source", "journal"), false},
+		{"shared-parent", filepath.Dir(oldRoot), false},
+		{"shared-grandparent", filepath.Dir(filepath.Dir(oldRoot)), false},
+		{"sibling", filepath.Join(filepath.Dir(oldRoot), "unslop-outcomes-v1"), true},
+		{"current-prefix-sibling", unslopCaptureRoot + "-journal", true},
+		{"previous-prefix-sibling", oldRoot + "-journal", true},
+		{"shorter-prefix-sibling", filepath.Join(filepath.Dir(oldRoot), "unslop-captured-release"), true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := unslopCallerRootNamespace(tc.path); got != tc.separate {
+				t.Fatalf("journal %q: separate=%t; want %t", tc.path, got, tc.separate)
+			}
+		})
 	}
-	if !unslopCallerRootNamespace(unslopSourceRoot+"/target/unslop-outcomes-v1") {t.Fatal("separate journal namespace was rejected")}
 }
 
 func TestUnslopCallerRootRefusesPrematureAndForeignRelease(t *testing.T) {

@@ -229,6 +229,9 @@ func unslopDurableCaptureOf(r unslopToolchainCaptureResult) (*unslopDurableCaptu
 
 func unslopDurableReceiptOf(r unslopCaptureReceipt) (*unslopDurableReceipt,error) {
 	if r.Domain!=unslopCaptureDomain||r.Source!=unslopCaptureSource||r.InstalledTarget!=unslopInstalledPath||r.Namespace!=unslopCaptureRoot||r.ToolCallID!=nil||r.NativeProcess==nil||r.NativeProcess.PID==0||r.NativeProcess.Created==0||r.Bytes<1||r.Bytes>32<<20||!r.CompleteCompiledInputs||!unslopCompleteIdentity(r.CandidateIdentity) {return nil,errUnslopDurableConflict}
+	if r.CommandSHA != fixedUnslopToolchainPurpose().CommandSHA {
+		return nil, errUnslopDurableConflict
+	}
 	for _,sha:=range []string{r.InputManifestSHA,r.CandidateSHA,r.CargoJSONSHA,r.CargoStreamSHA,r.CommandSHA} {if !unslopHex(sha,64){return nil,errUnslopDurableConflict}}
 	raw,_:=json.Marshal(r)
 	identity,_:=json.Marshal(r.CandidateIdentity)
@@ -264,6 +267,9 @@ func (e unslopDurableEvent) validFor(source, commandSHA string) bool {
 	case "staged","sealed","publish-intent":
 		if e.Receipt==nil||e.Capture!=nil||e.Owner!=nil||e.Published!=nil||e.BindingSHA!="" {return false}
 		r:=e.Receipt
+		if r.CommandSHA != commandSHA {
+			return false
+		}
 		for _,sha:=range []string{r.SHA,r.CandidateSHA,r.InputSHA,r.CargoJSONSHA,r.CargoStreamSHA,r.CommandSHA,r.IdentitySHA} {if !unslopHex(sha,64){return false}}
 		return r.Bytes>0&&r.Bytes<=32<<20&&r.PID>0&&r.Created>0&&(e.Kind=="staged"||r.Acknowledged&&r.Reaped)
 	case "publication": return e.Published!=nil&&e.Receipt==nil&&e.Capture==nil&&e.Owner==nil&&e.BindingSHA==""

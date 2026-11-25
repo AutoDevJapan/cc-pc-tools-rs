@@ -374,3 +374,58 @@ func TestUnslopReleaseConsumerUsesOriginBeforeHeldSoftware(t *testing.T) {
 		})
 	}
 }
+
+func TestUnslopCapturePinsCurrentProductInputs(t *testing.T) {
+	const source = "cb98dee1554f69e7bb2a0ca62b48834eadca895c"
+	const tree = "2bf0d6322bd1a98bf4115d8f295eed631f50808e"
+	inputs := syntheticUnslopCapture().before
+	if inputs.Source != source || inputs.Merge != source || inputs.Tree != tree {
+		t.Fatalf("unexpected capture revision: %s / %s / %s", inputs.Source, inputs.Merge, inputs.Tree)
+	}
+	pins := unslopCaptureSourceBlobs()
+	want := map[string]string{
+		".gitattributes":                         "3403225fd205479425d02934cc0ae8e1b8d873cb",
+		"Cargo.lock":                             "6837c52b654881ab1e8a32486631a3434acd4738",
+		"src/main.rs":                            "34db926315811692d13c39d1bd709649e55be3b8",
+		"src/rpc.rs":                             "a8dea21dd76523d288c1189488fa4b3ebbd3ed27",
+		"docs/distribution/godd-unslop-SKILL.md": "922935f9494416d1cf3a9e10c4a6cf12d48ed4dd",
+	}
+	for path, blob := range want {
+		if pins[path] != blob {
+			t.Fatalf("%s: got %s; want %s", path, pins[path], blob)
+		}
+	}
+	if _, ok := unslopCapturedManifest(inputs); !ok {
+		t.Fatal("current input set was rejected")
+	}
+	for _, tc := range []struct{ path, oldBlob string }{
+		{"src/main.rs", "308eaf162453f4e71777f1bfca668da56dce50ac"},
+		{"src/rpc.rs", "7aab0b15b283e2ad727d4a7e5ec96903cdd3453d"},
+		{"docs/distribution/godd-unslop-SKILL.md", "697fd9503e9800d568f7062dfd6decb34fe9ef9b"},
+		{".gitattributes", ""},
+	} {
+		t.Run(tc.path, func(t *testing.T) {
+			s := syntheticUnslopCapture()
+			for i := range s.before.Sources {
+				if s.before.Sources[i].Path == tc.path {
+					if tc.oldBlob == "" {
+						s.before.Sources = append(s.before.Sources[:i], s.before.Sources[i+1:]...)
+					} else {
+						s.before.Sources[i].Blob = tc.oldBlob
+					}
+					break
+				}
+			}
+			result := captureUnslopRelease(context.Background(), unslopCaptureAccess{
+				begin: func(context.Context) (unslopProducerSession, error) { return s, nil },
+				stage: func(context.Context, unslopCaptureReceipt, []byte) (unslopPendingCapture, error) {
+					t.Fatal("invalid input reached staging")
+					return nil, nil
+				},
+			})
+			if result.Qualified || result.Receipt != nil || result.Reason != "capture_inputs_unqualified_before_build" || s.builds != 0 || s.artifactReads != 0 || !s.closed {
+				t.Fatal("stale or missing input reached capture", result)
+			}
+		})
+	}
+}

@@ -33,11 +33,22 @@ type unslopCallerHeldRoot struct {
 	closeError error
 }
 
+const unslopPreviousCaptureRoot = unslopSourceRoot + "/target/unslop-captured-release-v1"
+
 func unslopCallerRootNamespace(path string) bool {
-	clean:=func(p string)string{return strings.ToLower(strings.ReplaceAll(filepath.Clean(p),"\\","/"))}
-	journal,capture:=clean(path),clean(unslopCaptureRoot)
-	boundary:=func(parent string)string{return strings.TrimSuffix(parent,"/")+"/"}
-	return journal!=""&&journal!="."&&journal!=capture&&!strings.HasPrefix(journal,boundary(capture))&&!strings.HasPrefix(capture,boundary(journal))
+	clean := func(p string) string { return strings.ToLower(filepath.ToSlash(filepath.Clean(p))) }
+	boundary := func(p string) string { return strings.TrimSuffix(p, "/") + "/" }
+	journal := clean(path)
+	if journal == "." {
+		return false
+	}
+	for _, root := range [...]string{unslopCaptureRoot, unslopPreviousCaptureRoot} {
+		capture := clean(root)
+		if journal == capture || strings.HasPrefix(journal, boundary(capture)) || strings.HasPrefix(capture, boundary(journal)) {
+			return false
+		}
+	}
+	return true
 }
 
 // Only an internal acquisition flow may adopt an actual qualified held store.

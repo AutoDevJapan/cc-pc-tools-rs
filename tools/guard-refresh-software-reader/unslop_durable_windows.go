@@ -229,6 +229,9 @@ func unslopDurableCaptureOf(r unslopToolchainCaptureResult) (*unslopDurableCaptu
 
 func unslopDurableReceiptOf(r unslopCaptureReceipt) (*unslopDurableReceipt,error) {
 	if r.Domain!=unslopCaptureDomain||r.Source!=unslopCaptureSource||r.InstalledTarget!=unslopInstalledPath||r.Namespace!=unslopCaptureRoot||r.ToolCallID!=nil||r.NativeProcess==nil||r.NativeProcess.PID==0||r.NativeProcess.Created==0||r.Bytes<1||r.Bytes>32<<20||!r.CompleteCompiledInputs||!unslopCompleteIdentity(r.CandidateIdentity) {return nil,errUnslopDurableConflict}
+	if r.CommandSHA != fixedUnslopToolchainPurpose().CommandSHA {
+		return nil, errUnslopDurableConflict
+	}
 	for _,sha:=range []string{r.InputManifestSHA,r.CandidateSHA,r.CargoJSONSHA,r.CargoStreamSHA,r.CommandSHA} {if !unslopHex(sha,64){return nil,errUnslopDurableConflict}}
 	raw,_:=json.Marshal(r)
 	identity,_:=json.Marshal(r.CandidateIdentity)
@@ -253,13 +256,20 @@ func unslopDurableOwnerValid(r unslopRetainedReport) bool {
 }
 
 func (e unslopDurableEvent) valid() bool {
-	if e.Domain!=unslopDurableDomain||e.Source!=unslopCaptureSource||e.CommandSHA!=fixedUnslopToolchainPurpose().CommandSHA||!unslopHex(e.Generation,32)||e.Sequence<1||e.Sequence>unslopDurableEvents||e.Sequence==1&&e.PreviousSHA!=""||e.Sequence>1&&!unslopHex(e.PreviousSHA,64) {return false}
+	return e.validFor(unslopCaptureSource, fixedUnslopToolchainPurpose().CommandSHA)
+}
+
+func (e unslopDurableEvent) validFor(source, commandSHA string) bool {
+	if e.Domain!=unslopDurableDomain||e.Source!=source||e.CommandSHA!=commandSHA||!unslopHex(e.Generation,32)||e.Sequence<1||e.Sequence>unslopDurableEvents||e.Sequence==1&&e.PreviousSHA!=""||e.Sequence>1&&!unslopHex(e.PreviousSHA,64) {return false}
 	switch e.Kind {
 	case "started": return e.Sequence==1&&e.BindingSHA==""&&e.Receipt==nil&&e.Capture==nil&&e.Owner==nil&&e.Published==nil
 	case "binding": return unslopHex(e.BindingSHA,64)&&e.Receipt==nil&&e.Capture==nil&&e.Owner==nil&&e.Published==nil
 	case "staged","sealed","publish-intent":
 		if e.Receipt==nil||e.Capture!=nil||e.Owner!=nil||e.Published!=nil||e.BindingSHA!="" {return false}
 		r:=e.Receipt
+		if r.CommandSHA != commandSHA {
+			return false
+		}
 		for _,sha:=range []string{r.SHA,r.CandidateSHA,r.InputSHA,r.CargoJSONSHA,r.CargoStreamSHA,r.CommandSHA,r.IdentitySHA} {if !unslopHex(sha,64){return false}}
 		return r.Bytes>0&&r.Bytes<=32<<20&&r.PID>0&&r.Created>0&&(e.Kind=="staged"||r.Acknowledged&&r.Reaped)
 	case "publication": return e.Published!=nil&&e.Receipt==nil&&e.Capture==nil&&e.Owner==nil&&e.BindingSHA==""
@@ -277,7 +287,17 @@ type unslopDurableJournal struct {
 	pending *unslopDurableEvent
 }
 
+// Only metadata recovery recognizes the previous fixed source and command.
+// A live writer accepts the current tuple exclusively.
+const unslopPreviousCaptureSource = "0c12029d1a383f406bd0bdbf87d40bc2af1b1279"
+const unslopPreviousCommandSHA = "e5cd17481b074394ec9eaee4bb177f2fc05a1093dc7847daffe173ae618d2293"
+
 func (j *unslopDurableJournal) load() error {
+	return j.loadEvents(false)
+}
+
+func (j *unslopDurableJournal) loadEvents(history bool) error {
+	source, commandSHA := unslopCaptureSource, fixedUnslopToolchainPurpose().CommandSHA
 	// Publish a new cache only after the entire stored prefix is verified.
 	// A transient read failure must not erase the last sealed receipt.
 	next:=unslopDurableJournal{store:j.store,generation:j.generation}
@@ -291,7 +311,11 @@ func (j *unslopDurableJournal) load() error {
 		if err!=nil{return err}
 		var e unslopDurableEvent
 		dec:=json.NewDecoder(bytes.NewReader(raw));dec.DisallowUnknownFields()
-		if dec.Decode(&e)!=nil||dec.Decode(new(any))!=io.EOF||!e.valid()||e.Generation!=j.generation||e.Sequence!=n {clear(raw);return errUnslopDurableConflict}
+		if dec.Decode(&e)!=nil||dec.Decode(new(any))!=io.EOF||e.Generation!=j.generation||e.Sequence!=n {clear(raw);return errUnslopDurableConflict}
+		if history && n == 1 && e.Source == unslopPreviousCaptureSource {
+			source, commandSHA = unslopPreviousCaptureSource, unslopPreviousCommandSHA
+		}
+		if !e.validFor(source, commandSHA) {clear(raw);return errUnslopDurableConflict}
 		canonical,_:=json.Marshal(e)
 		if !bytes.Equal(canonical,raw)||n>1&&e.PreviousSHA!=next.hashes[n-2] {clear(raw);return errUnslopDurableConflict}
 		if n==1&&e.Kind!="started" {clear(raw);return errUnslopDurableConflict}
@@ -720,7 +744,7 @@ func (s *unslopDurableStore) Recover(ctx context.Context,generation string) (uns
 	s.mu.Lock();defer s.mu.Unlock()
 	unlock,err:=s.lock(generation);if err!=nil{return r,err};defer unlock()
 	j:=&unslopDurableJournal{store:s,generation:generation}
-	if err=j.load();err!=nil{return r,err}
+	if err=j.loadEvents(true);err!=nil{return r,err}
 	if len(j.events)==0 {r.State="durable_recovery_incomplete";return r,nil}
 	r.State="durable_recovery_incomplete"
 	r.Publication="not_started"

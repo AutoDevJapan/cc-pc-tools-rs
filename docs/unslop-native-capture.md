@@ -5,7 +5,7 @@
 
 ## 配布物を生成する
 
-`normalUnslopLiveCaptureAccess` は、固定したUnslopのcommitと10個のGit blobを照合し、新しい専用namespaceへソースを展開します。
+`normalUnslopLiveCaptureAccess` は、固定したUnslopのcommitと11個のGit blob（`.gitattributes` と配布Skillを含む）を照合し、新しい専用namespaceへソースを展開します。
 Cargo.lockに対応する依存、実際に使う設定、toolchainを保持し、ビルド前後の内容とidentityを比較します。
 既存のCargo設定や認証ファイル、旧リリース、保護された評価packetは読みません。
 

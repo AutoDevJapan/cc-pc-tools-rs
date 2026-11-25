@@ -1,10 +1,10 @@
 name: Shared ToDo cloud
 on:
   pull_request:
-    paths: ['shared-todo-cloud/**', 'cc-todo/**', 'cc-job-policy/**', '.github/workflows/shared-todo-cloud.yml']
+    paths: ['shared-todo-cloud/**', 'cc-todo/**', 'cc-job-policy/**', 'Cargo.toml', 'Cargo.lock', '.github/workflows/shared-todo-cloud.yml']
   push:
     branches: [main]
-    paths: ['shared-todo-cloud/**', 'cc-todo/**', 'cc-job-policy/**', '.github/workflows/shared-todo-cloud.yml']
+    paths: ['shared-todo-cloud/**', 'cc-todo/**', 'cc-job-policy/**', 'Cargo.toml', 'Cargo.lock', '.github/workflows/shared-todo-cloud.yml']
 permissions:
   contents: read
 concurrency:

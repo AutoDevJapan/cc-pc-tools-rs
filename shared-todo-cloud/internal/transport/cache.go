@@ -92,8 +92,12 @@ func saveCache(path string, b []byte, revision uint64, stateIDs ...string) error
 	if len(stateIDs) > 0 {
 		id = stateIDs[0]
 	}
-	return atomicWrite(path+".remote-revision", wire(cacheState{Revision: revision, StateID: id, SHA256: digest(b), Bytes: int64(len(b))}))
+	return saveCacheState(path, cacheState{Revision: revision, StateID: id, SHA256: digest(b), Bytes: int64(len(b))})
 }
+func saveCacheState(path string, state cacheState) error {
+	return atomicWrite(path+".remote-revision", wire(state))
+}
+
 func atomicWrite(path string, b []byte) error {
 	f, err := os.CreateTemp(filepath.Dir(path), ".todo-cache-*")
 	if err != nil {

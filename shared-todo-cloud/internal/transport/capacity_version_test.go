@@ -194,3 +194,120 @@ func TestCapacityVersionCancellationDoesNotBeginOrRefresh(t *testing.T) {
 		t.Fatal("canceled inspection reported success or wrote fixture files")
 	}
 }
+
+func TestBridgeRequiresAnUnambiguousOperationBeforeDispatch(t *testing.T) {
+	for _, fixture := range []struct {
+		name string
+		keys string
+	}{
+		{"read then write", `"op":"capacity-version","op":"begin"`},
+		{"write then read", `"op":"begin","op":"capacity-version"`},
+		{"case alias", `"op":"capacity-version","Op":"begin"`},
+		{"escaped duplicate", `"op":"capacity-version","\u006fp":"begin"`},
+		{"case alias alone", `"OP":"begin"`},
+		{"wrong type", `"op":7`},
+		{"null", `"op":null`},
+	} {
+		t.Run(fixture.name, func(t *testing.T) {
+			l, c := newLedger(t)
+			cache := cachePath(t)
+			cfg := activateFixture(t, c, cache)
+			before := capacityFixtureFiles(t, filepath.Dir(cache))
+			request := fmt.Sprintf("{%s,\"cachePath\":%q}\n", fixture.keys, cache)
+			var output bytes.Buffer
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			err := Serve(ctx, cfg, strings.NewReader(request), &output)
+			if err == nil || err.Error() != "todo_remote_invalid_control_frame" || output.Len() != 0 {
+				t.Fatal("ambiguous operation was not rejected before dispatch")
+			}
+			if !reflect.DeepEqual(capacityFixtureFiles(t, filepath.Dir(cache)), before) {
+				t.Fatal("ambiguous operation changed the fixture")
+			}
+			l.mu.Lock()
+			defer l.mu.Unlock()
+			if l.acquires != 0 || l.versionReads != 0 || l.stateReads != 0 || l.changeReads != 0 || l.commits != 0 || l.releases != 0 {
+				t.Fatal("ambiguous operation reached the fixture service")
+			}
+		})
+	}
+}
+
+func TestBridgeSingleBeginAndCloseStillUseTheWriterSession(t *testing.T) {
+	l, c := newLedger(t)
+	cache := cachePath(t)
+	cfg := activateFixture(t, c, cache)
+	lock, err := os.OpenFile(filepath.Join(filepath.Dir(cache), "todo.lock"), os.O_CREATE|os.O_RDWR, 0600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lock.Close()
+	if err := lockFile(lock); err != nil {
+		t.Fatal(err)
+	}
+	defer unlockFile(lock)
+	request := fmt.Sprintf("{\"op\":\"begin\",\"cachePath\":%q}\n{\"op\":\"close\"}\n", cache)
+	var output bytes.Buffer
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := Serve(ctx, cfg, strings.NewReader(request), &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.String() != "{\"ok\":true,\"revision\":1}\n{\"ok\":true}\n" {
+		t.Fatal("valid writer framing changed")
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.acquires != 1 || l.stateReads != 1 || l.releases != 1 || l.versionReads != 0 || l.commits != 0 {
+		t.Fatal("valid writer did not use one acquire, snapshot and release")
+	}
+}
+
+func TestOrdinarySyncFillsTheLegacyCapacitySidecar(t *testing.T) {
+	for _, legacy := range []string{"omitted", "zero"} {
+		t.Run(legacy, func(t *testing.T) {
+			l, c := newLedger(t)
+			l.mu.Lock()
+			l.stateID = strings.Repeat("a", 64)
+			id := l.stateID
+			l.mu.Unlock()
+			cache := cachePath(t)
+			cfg := activateFixture(t, c, cache)
+			raw := append([]byte{0xef, 0xbb, 0xbf}, []byte(" \r\n"+fixture+"\r\n ")...)
+			if err := os.WriteFile(cache, raw, 0600); err != nil {
+				t.Fatal(err)
+			}
+			sidecar := map[string]any{"revision": 1, "stateId": id, "sha256": digest(raw)}
+			if legacy == "zero" {
+				sidecar["bytes"] = 0
+			}
+			if err := os.WriteFile(cache+".remote-revision", wire(sidecar), 0600); err != nil {
+				t.Fatal(err)
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := Sync(ctx, cfg); err != nil {
+				t.Fatal(err)
+			}
+			complete := cacheState{Revision: 1, StateID: id, SHA256: digest(raw), Bytes: int64(len(raw))}
+			if !bytes.Equal(read(t, cache), raw) ||
+				!bytes.Equal(read(t, cache+".remote-revision"), wire(complete)) {
+				t.Fatal("sync did not preserve the raw cache and upgrade the sidecar")
+			}
+			before := capacityFixtureFiles(t, filepath.Dir(cache))
+			if err := syncIfChanged(ctx, cfg, c); err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(capacityFixtureFiles(t, filepath.Dir(cache)), before) {
+				t.Fatal("complete sidecar was rewritten on a stable watch poll")
+			}
+			l.mu.Lock()
+			defer l.mu.Unlock()
+			if l.acquires != 1 || l.releases != 1 || l.versionReads != 1 || l.stateReads != 0 ||
+				l.changeReads != 0 || l.commits != 0 {
+				t.Fatal("sidecar upgrade repeated the sync or fetched a document")
+			}
+		})
+	}
+}

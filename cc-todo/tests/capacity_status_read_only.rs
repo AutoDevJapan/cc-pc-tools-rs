@@ -24,15 +24,14 @@ fn capacity_status_preserves_local_bom_and_legacy_fields() {
     let mut before = b"\xef\xbb\xbf".to_vec();
     before.extend_from_slice(br#"{"items":[{"id":7,"status":"todo","capacity_decision":{"key":"capacity-decision-v1","futureField":1}}]}"#);
     fs::write(&lock, b"lock\n").unwrap();
-    let mut permissions = fs::metadata(&lock).unwrap().permissions();
+    let original_permissions = fs::metadata(&lock).unwrap().permissions();
+    let mut permissions = original_permissions.clone();
     permissions.set_readonly(true);
     fs::set_permissions(&lock, permissions).unwrap();
     fs::write(&path, &before).unwrap();
 
     let out = status(home.path());
-    let mut permissions = fs::metadata(&lock).unwrap().permissions();
-    permissions.set_readonly(false);
-    fs::set_permissions(&lock, permissions).unwrap();
+    fs::set_permissions(&lock, original_permissions).unwrap();
     assert!(out.status.success());
     assert!(out.stderr.is_empty());
     let view: Value = serde_json::from_slice(&out.stdout).unwrap();

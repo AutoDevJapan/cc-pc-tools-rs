@@ -98,8 +98,15 @@ func beginSession(ctx context.Context, c *Client, clientID, cache string, renewE
 	if err == nil {
 		err = s.healthy()
 	}
-	if err == nil && !reuse {
-		err = saveCache(cache, raw, lease.Revision, lease.StateID)
+	if err == nil {
+		if !reuse {
+			err = saveCache(cache, raw, lease.Revision, lease.StateID)
+		} else if state.Bytes == 0 && len(raw) > 0 {
+			// Same revision, identity and digest were verified under the writer
+			// lock. Upgrade only the legacy sidecar, preserving the cache bytes.
+			state.Bytes = int64(len(raw))
+			err = saveCacheState(cache, state)
+		}
 	}
 	if err == nil && pending != nil {
 		err = clearResolved(cache, pending, s.resolution)

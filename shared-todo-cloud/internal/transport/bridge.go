@@ -1,6 +1,7 @@
 package transport
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -10,14 +11,50 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 type bridgeRequest struct {
-	Op           string `json:"op"`
 	CachePath    string `json:"cachePath"`
 	DocumentPath string `json:"documentPath"`
 	ItemID       int64  `json:"itemId,omitempty"`
 }
+
+// Decode the dispatch key before decoding the other fields. The struct
+// decoder accepts case-insensitive matches and uses the last duplicate.
+func bridgeOperation(frame json.RawMessage) (string, error) {
+	invalid := errors.New("todo_remote_invalid_control_frame")
+	if !utf8.Valid(frame) {
+		return "", invalid
+	}
+	decoder := json.NewDecoder(bytes.NewReader(frame))
+	if token, err := decoder.Token(); err != nil || token != json.Delim('{') {
+		return "", invalid
+	}
+	var op string
+	for decoder.More() {
+		key, err := decoder.Token()
+		name, ok := key.(string)
+		if err != nil || !ok {
+			return "", invalid
+		}
+		if strings.EqualFold(name, "op") {
+			if name != "op" || op != "" || decoder.Decode(&op) != nil || op == "" {
+				return "", invalid
+			}
+		} else {
+			var ignored json.RawMessage
+			if decoder.Decode(&ignored) != nil {
+				return "", invalid
+			}
+		}
+	}
+	if token, err := decoder.Token(); err != nil || token != json.Delim('}') || op == "" {
+		return "", invalid
+	}
+	return op, nil
+}
+
 type bridgeResponse struct {
 	OK          bool         `json:"ok"`
 	Revision    uint64       `json:"revision,omitempty"`
@@ -52,6 +89,10 @@ func Serve(ctx context.Context, cfg Config, in io.Reader, out io.Writer) error {
 		} else if err != nil {
 			return errors.New("todo_remote_invalid_control_frame")
 		}
+		op, frameErr := bridgeOperation(frame)
+		if frameErr != nil {
+			return frameErr
+		}
 		var req bridgeRequest
 		if json.Unmarshal(frame, &req) != nil {
 			return errors.New("todo_remote_invalid_control_frame")
@@ -59,7 +100,7 @@ func Serve(ctx context.Context, cfg Config, in io.Reader, out io.Writer) error {
 		var revision uint64
 		var note *CurrentNote
 		var version *Version
-		switch req.Op {
+		switch op {
 		case "capacity-version":
 			_, frameErr := readProjectionFields(frame, "op", "cachePath")
 			if frameErr != nil || session != nil || !samePath(req.CachePath, cfg.CachePath) {
@@ -123,7 +164,7 @@ func Serve(ctx context.Context, cfg Config, in io.Reader, out io.Writer) error {
 		if encodeErr := enc.Encode(resp); encodeErr != nil {
 			return errors.New("todo_remote_control_write_failed")
 		}
-		if req.Op == "close" || req.Op == "current-note" || req.Op == "capacity-version" || err != nil {
+		if op == "close" || op == "current-note" || op == "capacity-version" || err != nil {
 			return nil
 		}
 	}

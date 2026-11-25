@@ -8,11 +8,15 @@ use std::{
     fs::{self, File, OpenOptions},
     io::{self, BufRead, BufReader, Read, Write},
     path::{Path, PathBuf},
-    process::{Child, ChildStdin, Command, Stdio},
+    process::{Child, ChildStdin, ChildStdout, Command, Stdio},
     sync::{Arc, Mutex, OnceLock, mpsc},
     thread::{self, JoinHandle},
     time::{Duration, Instant},
 };
+
+#[cfg(windows)]
+#[path = "todo_remote/capacity_process_windows.rs"]
+mod capacity_process;
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -374,9 +378,14 @@ fn capacity_version(cfg: &Settings, path: &Path) -> io::Result<CacheVersion> {
         .map_err(|_| error("todo_remote_bridge_write_failed"))?;
     let reply = bridge.receive(Duration::from_secs(30));
     let clean_exit = bridge.close();
-    writer
+    #[cfg(windows)]
+    let written = capacity_process::join_pipe(writer)
+        .ok_or_else(|| error("todo_remote_bridge_write_failed"))?;
+    #[cfg(not(windows))]
+    let written = writer
         .join()
-        .map_err(|_| error("todo_remote_bridge_write_failed"))??;
+        .map_err(|_| error("todo_remote_bridge_write_failed"))?;
+    written?;
     let reply = reply?;
     if !clean_exit {
         return Err(error("todo_remote_bridge_unavailable"));
@@ -504,13 +513,60 @@ impl Drop for Candidate {
     }
 }
 
+enum BridgeChild {
+    Standard(Child),
+    #[cfg(windows)]
+    Capacity(capacity_process::CapacityProcess),
+}
+
+impl BridgeChild {
+    fn stop(self) {
+        match self {
+            Self::Standard(mut child) => {
+                let _ = child.kill();
+                let _ = child.wait();
+            }
+            #[cfg(windows)]
+            Self::Capacity(child) => child.stop(),
+        }
+    }
+}
+
+fn spawn_standard_bridge(
+    cfg: &Settings,
+) -> io::Result<(BridgeChild, Option<ChildStdin>, ChildStdout)> {
+    let mut cmd = Command::new(&cfg.bridge);
+    cmd.arg("session")
+        .arg("--config")
+        .arg(&cfg.credentials)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000);
+    }
+    let mut child = cmd
+        .spawn()
+        .map_err(|_| error("todo_remote_bridge_start_failed"))?;
+    let input = child.stdin.take();
+    let child_stdout = child.stdout.take();
+    let child = BridgeChild::Standard(child);
+    let Some(stdout) = child_stdout else {
+        drop(input);
+        child.stop();
+        return Err(error("todo_remote_bridge_pipe_failed"));
+    };
+    Ok((child, input, stdout))
+}
+
 struct Bridge {
-    child: Child,
+    child: Option<BridgeChild>,
     input: Option<ChildStdin>,
     replies: mpsc::Receiver<io::Result<Value>>,
     reader: Option<JoinHandle<()>>,
     failed: bool,
-    closed: bool,
     unconfirmed: bool,
 }
 impl Bridge {
@@ -518,27 +574,15 @@ impl Bridge {
         Self::spawn_with_reply_kind(cfg, ReplyKind::Control)
     }
     fn spawn_with_reply_kind(cfg: &Settings, kind: ReplyKind) -> io::Result<Self> {
-        let mut cmd = Command::new(&cfg.bridge);
-        cmd.arg("session")
-            .arg("--config")
-            .arg(&cfg.credentials)
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null());
-        #[cfg(windows)]
-        {
-            use std::os::windows::process::CommandExt;
-            cmd.creation_flags(0x08000000);
-        }
-        let mut child = cmd
-            .spawn()
-            .map_err(|_| error("todo_remote_bridge_start_failed"))?;
-        let input = child.stdin.take();
-        let Some(stdout) = child.stdout.take() else {
-            drop(input);
-            let _ = child.kill();
-            let _ = child.wait();
-            return Err(error("todo_remote_bridge_pipe_failed"));
+        let (child, input, stdout) = match kind {
+            #[cfg(windows)]
+            ReplyKind::CapacityVersion => {
+                let (process, input, stdout) =
+                    capacity_process::CapacityProcess::spawn(&cfg.bridge, &cfg.credentials)
+                        .map_err(|_| error("todo_remote_bridge_start_failed"))?;
+                (BridgeChild::Capacity(process), Some(input), stdout)
+            }
+            _ => spawn_standard_bridge(cfg)?,
         };
         let (send, replies) = mpsc::channel();
         let reader = thread::Builder::new().spawn(move || {
@@ -563,18 +607,16 @@ impl Bridge {
             Ok(reader) => reader,
             Err(_) => {
                 drop(input);
-                let _ = child.kill();
-                let _ = child.wait();
+                child.stop();
                 return Err(error("todo_remote_bridge_pipe_failed"));
             }
         };
         Ok(Self {
-            child,
+            child: Some(child),
             input,
             replies,
             reader: Some(reader),
             failed: false,
-            closed: false,
             unconfirmed: false,
         })
     }
@@ -662,27 +704,39 @@ impl Bridge {
         Ok(reply)
     }
     fn close(&mut self) -> bool {
-        if self.closed {
+        let Some(child) = self.child.take() else {
             return false;
-        }
-        self.closed = true;
+        };
         // EOF also asks the bridge to release its lease, even after a failed
         // operation. Keep the byte lock until that process has exited.
         self.input.take();
-        let deadline = Instant::now() + Duration::from_secs(5);
-        let clean_exit = loop {
-            match self.child.try_wait() {
-                Ok(Some(status)) => break status.success(),
-                _ if Instant::now() < deadline => thread::sleep(Duration::from_millis(10)),
-                _ => {
-                    let _ = self.child.kill();
-                    let _ = self.child.wait();
-                    break false;
-                }
+        let reader = self.reader.take();
+        match child {
+            #[cfg(windows)]
+            BridgeChild::Capacity(child) => {
+                let clean_exit = child.finish();
+                let reader_joined = reader.and_then(capacity_process::join_pipe).is_some();
+                clean_exit && reader_joined
             }
-        };
-        let reader_joined = self.reader.take().is_some_and(|reader| reader.join().is_ok());
-        clean_exit && reader_joined
+            BridgeChild::Standard(mut child) => {
+                let deadline = Instant::now() + Duration::from_secs(5);
+                let clean_exit = loop {
+                    match child.try_wait() {
+                        Ok(Some(status)) => break status.success(),
+                        _ if Instant::now() < deadline => {
+                            thread::sleep(Duration::from_millis(10));
+                        }
+                        _ => {
+                            let _ = child.kill();
+                            let _ = child.wait();
+                            break false;
+                        }
+                    }
+                };
+                let reader_joined = reader.is_some_and(|reader| reader.join().is_ok());
+                clean_exit && reader_joined
+            }
+        }
     }
 }
 impl Drop for Bridge {

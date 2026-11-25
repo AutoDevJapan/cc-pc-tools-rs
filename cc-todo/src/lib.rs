@@ -1641,9 +1641,13 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
 }
 pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
     if matches!(&cli.command, Command::CapacityStatus) {
-        let _lock = Lock::acquire_existing(&paths.lock, Duration::from_secs(30))?;
-        let db = cc_job_policy::todo_store::read_capacity_after_lock(&paths.store).map_err(err)?;
-        println!("{}", capacity_cycle::status(&db)?);
+        let status = {
+            let _lock = Lock::acquire_existing(&paths.lock, Duration::from_secs(30))?;
+            let db =
+                cc_job_policy::todo_store::read_capacity_after_lock(&paths.store).map_err(err)?;
+            capacity_cycle::status(&db)?
+        };
+        println!("{status}");
         return Ok(());
     }
     if let Command::CurrentNote { id } = &cli.command {

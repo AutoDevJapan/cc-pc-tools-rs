@@ -416,17 +416,14 @@ func TestCapacityStatusReleasesTheLockBeforeOutputIsDrained(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Observe queued stdout without draining it. The fixture is much larger
-	// than the pipe. A writer must be able to lock before we read any bytes.
+	// Observe stdout without draining it. PeekNamedPipe can report the bytes
+	// of a pending write, so availability alone says nothing about completion.
 	peek := windows.NewLazySystemDLL("kernel32.dll").NewProc("PeekNamedPipe")
 	for {
 		var available uint32
 		ok, _, err := peek.Call(pipe.Fd(), 0, 0, 0, uintptr(unsafe.Pointer(&available)), 0)
 		if ok == 0 {
 			t.Fatal("could not observe pending fixture stdout:", err)
-		}
-		if available >= uint32(len(largeValue)) {
-			t.Fatal("fixture did not hold the CLI under output backpressure")
 		}
 		if available > 0 {
 			break
@@ -437,10 +434,24 @@ func TestCapacityStatusReleasesTheLockBeforeOutputIsDrained(t *testing.T) {
 		case <-time.After(10 * time.Millisecond):
 		}
 	}
+	// The competing writer must acquire byte 0 before stdout is drained.
 	assertCapacityWriterLock(t, home)
-	body, err := io.ReadAll(io.LimitReader(pipe, int64(len(largeValue))+4096))
+	var status uint32
+	var waitErr error
+	if err := cmd.Process.WithHandle(func(handle uintptr) {
+		status, waitErr = windows.WaitForSingleObject(windows.Handle(handle), 0)
+	}); err != nil || waitErr != nil || status != uint32(windows.WAIT_TIMEOUT) {
+		t.Fatalf("capacity CLI was not running after lock acquisition with stdout undrained: wait=%d error=%v handle=%v", status, waitErr, err)
+	}
+
+	// Read EOF after checking the lock. Hitting the cap does not prove EOF.
+	maxOutput := len(largeValue) + 4096
+	body, err := io.ReadAll(io.LimitReader(pipe, int64(maxOutput)))
 	if err != nil {
 		t.Fatal(err)
+	}
+	if len(body) == maxOutput {
+		t.Fatal("capacity fixture stdout exceeded its bound")
 	}
 	if err := cmd.Wait(); err != nil || stderr.Len() != 0 {
 		t.Fatalf("capacity CLI did not finish cleanly: %v", err)

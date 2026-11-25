@@ -2,14 +2,13 @@
 use std::{
     ffi::OsStr,
     fs::File,
-    io::{self, pipe},
+    io::{self, PipeReader, PipeWriter, pipe},
     mem::{size_of, size_of_val, zeroed},
     os::windows::{
         ffi::OsStrExt,
         io::{AsRawHandle, FromRawHandle, OwnedHandle},
     },
     path::Path,
-    process::{ChildStdin, ChildStdout},
     ptr::{null, null_mut},
     thread::{self, JoinHandle},
     time::{Duration, Instant},
@@ -45,7 +44,7 @@ impl CapacityProcess {
     pub(super) fn spawn(
         program: &Path,
         credentials: &Path,
-    ) -> io::Result<(Self, ChildStdin, ChildStdout)> {
+    ) -> io::Result<(Self, PipeWriter, PipeReader)> {
         // The unnamed, non-inheritable job is owned solely by the CLI.
         let job = unsafe { CreateJobObjectW(null(), null()) };
         if job.is_null() {
@@ -129,11 +128,9 @@ impl CapacityProcess {
         }
         let child = unsafe { OwnedHandle::from_raw_handle(process.hProcess) };
         let _primary_thread = unsafe { OwnedHandle::from_raw_handle(process.hThread) };
-        Ok((
-            Self { job, child },
-            ChildStdin::from(OwnedHandle::from(input)),
-            ChildStdout::from(OwnedHandle::from(output)),
-        ))
+        // io::pipe creates synchronous handles on Windows. Keep their native
+        // Read/Write implementations so the pipe workers can be canceled.
+        Ok((Self { job, child }, input, output))
     }
 
     pub(super) fn finish(self) -> bool {

@@ -8,7 +8,7 @@ use std::{
     fs::{self, File, OpenOptions},
     io::{self, BufRead, BufReader, Read, Write},
     path::{Path, PathBuf},
-    process::{Child, ChildStdin, ChildStdout, Command, Stdio},
+    process::{Child, Command, Stdio},
     sync::{Arc, Mutex, OnceLock, mpsc},
     thread::{self, JoinHandle},
     time::{Duration, Instant},
@@ -374,7 +374,7 @@ fn capacity_version(cfg: &Settings, path: &Path) -> io::Result<CacheVersion> {
     // Keep the deadline effective even if the child stops reading stdin.
     // Closing the pipe after this frame prevents another operation on it.
     let writer = thread::Builder::new()
-        .spawn(move || Bridge::send(&mut input, request))
+        .spawn(move || Bridge::send(input.as_mut(), request))
         .map_err(|_| error("todo_remote_bridge_write_failed"))?;
     let reply = bridge.receive(Duration::from_secs(30));
     let clean_exit = bridge.close();
@@ -532,9 +532,12 @@ impl BridgeChild {
     }
 }
 
+type BridgeInput = Box<dyn Write + Send>;
+type BridgeOutput = Box<dyn Read + Send>;
+
 fn spawn_standard_bridge(
     cfg: &Settings,
-) -> io::Result<(BridgeChild, Option<ChildStdin>, ChildStdout)> {
+) -> io::Result<(BridgeChild, Option<BridgeInput>, BridgeOutput)> {
     let mut cmd = Command::new(&cfg.bridge);
     cmd.arg("session")
         .arg("--config")
@@ -558,12 +561,13 @@ fn spawn_standard_bridge(
         child.stop();
         return Err(error("todo_remote_bridge_pipe_failed"));
     };
-    Ok((child, input, stdout))
+    let input = input.map(|input| Box::new(input) as BridgeInput);
+    Ok((child, input, Box::new(stdout)))
 }
 
 struct Bridge {
     child: Option<BridgeChild>,
-    input: Option<ChildStdin>,
+    input: Option<BridgeInput>,
     replies: mpsc::Receiver<io::Result<Value>>,
     reader: Option<JoinHandle<()>>,
     failed: bool,
@@ -580,6 +584,8 @@ impl Bridge {
                 let (process, input, stdout) =
                     capacity_process::CapacityProcess::spawn(&cfg.bridge, &cfg.credentials)
                         .map_err(|_| error("todo_remote_bridge_start_failed"))?;
+                let input: BridgeInput = Box::new(input);
+                let stdout: BridgeOutput = Box::new(stdout);
                 (BridgeChild::Capacity(process), Some(input), stdout)
             }
             _ => spawn_standard_bridge(cfg)?,
@@ -655,10 +661,10 @@ impl Bridge {
             .input
             .as_mut()
             .ok_or_else(|| error("todo_remote_bridge_closed"))?;
-        Self::send(input, request)?;
+        Self::send(input.as_mut(), request)?;
         self.receive(timeout)
     }
-    fn send(input: &mut ChildStdin, request: Value) -> io::Result<()> {
+    fn send(input: &mut dyn Write, request: Value) -> io::Result<()> {
         serde_json::to_writer(&mut *input, &request)
             .map_err(|_| error("todo_remote_bridge_write_failed"))?;
         input

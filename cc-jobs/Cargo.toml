@@ -6,9 +6,14 @@ default-run = "codex_jobs"
 
 [dev-dependencies]
 tempfile = "3"
+cc-ask = { path = "../cc-ask" }
+
+# cc-todo and cc-scheduler are Windows-only products: cc-scheduler depends on winreg and Win32
+# APIs without a platform condition, and cc-todo depends on cc-scheduler. The tests that drive
+# them run on Windows only, so non-Windows test builds do not build or link them.
+[target.'cfg(windows)'.dev-dependencies]
 cc-todo = { path = "../cc-todo" }
 cc-scheduler = { path = "../cc-scheduler" }
-cc-ask = { path = "../cc-ask" }
 
 [dependencies]
 cc-job-policy = { path = "../cc-job-policy" }

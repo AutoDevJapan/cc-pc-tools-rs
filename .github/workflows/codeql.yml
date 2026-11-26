@@ -53,6 +53,20 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+          fetch-depth: ${{ matrix.language == 'rust' && '0' || '1' }}
+      - name: Prepare Rust before Linux source selection
+        if: runner.environment == 'github-hosted' && matrix.language == 'rust' && (github.event_name == 'push' || github.event_name == 'pull_request')
+        id: linux_projection_rust
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.95.0 --profile minimal --target x86_64-unknown-linux-gnu
+          fixed_cargo=$(rustup which --toolchain 1.95.0 cargo)
+          fixed_rustc=$(rustup which --toolchain 1.95.0 rustc)
+          [[ "$fixed_cargo" == /* && "$fixed_cargo" != *$'\n'* && -x "$fixed_cargo" ]]
+          [[ "$fixed_rustc" == /* && "$fixed_rustc" != *$'\n'* && -x "$fixed_rustc" ]]
+          printf 'cargo=%s\nrustc=%s\n' "$fixed_cargo" "$fixed_rustc" >> "$GITHUB_OUTPUT"
+          printf 'RUSTUP_TOOLCHAIN=1.95.0\n' >> "$GITHUB_ENV"
       - uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4
         with:
           languages: ${{ matrix.language }}
@@ -64,3 +78,116 @@ jobs:
       - uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4
         with:
           category: '/language:${{ matrix.language }}'
+
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        if: matrix.language == 'rust' && (github.event_name == 'push' || github.event_name == 'pull_request')
+        with:
+          go-version-file: tools/test-scope/go.mod
+          cache: false
+      - name: Select affected Linux job projection cases
+        if: matrix.language == 'rust' && (github.event_name == 'push' || github.event_name == 'pull_request')
+        id: linux_projection_scope
+        env:
+          RUSTUP_TOOLCHAIN: '1.95.0'
+          CI_RUNNER_ENVIRONMENT: ${{ runner.environment }}
+          CI_FIXED_CARGO: ${{ steps.linux_projection_rust.outputs.cargo }}
+          CI_FIXED_RUSTC: ${{ steps.linux_projection_rust.outputs.rustc }}
+          CC_LINUX_CARGO_TOOLCHAIN: '1.95.0'
+          SCOPE_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          SCOPE_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          SCOPE_EVENT_NAME: ${{ github.event_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$RUNNER_OS" = Linux
+          if [[ "$CI_RUNNER_ENVIRONMENT" == github-hosted ]]; then
+            [[ "$CI_FIXED_CARGO" == /* && -x "$CI_FIXED_CARGO" ]]
+            export PATH="${CI_FIXED_CARGO%/*}:$PATH"
+            test "$(command -v cargo)" = "$CI_FIXED_CARGO"
+            [[ "$CI_FIXED_RUSTC" == /* && -x "$CI_FIXED_RUSTC" ]]
+            export RUSTC="$CI_FIXED_RUSTC"
+          else
+            versions="$RUNNER_TEMP/cc-jobs-linux-toolchain.json"
+            cargo --ci-toolchain-versions=1.95.0 > "$versions"
+            jq -e 'keys == ["cargo_release","domain","rustc_release"] and .domain == "cc-pc-tools-linux-toolchain-v1" and .cargo_release == "1.95.0" and .rustc_release == "1.95.0"' "$versions" > /dev/null
+          fi
+          args=(-C tools/test-scope run . -root "$GITHUB_WORKSPACE" -head "$SCOPE_HEAD_SHA" -event "$SCOPE_EVENT_NAME")
+          if [[ -n "$SCOPE_BASE_SHA" ]]; then args+=(-base "$SCOPE_BASE_SHA"); fi
+          scope_file="$RUNNER_TEMP/cc-jobs-linux-projection-scope.json"
+          go "${args[@]}" > "$scope_file"
+          jq -e --arg head "$SCOPE_HEAD_SHA" '.head == $head and (.mode == "none" or .mode == "affected" or .mode == "full") and (.packages | type == "array") and all(.packages[]; type == "string")' "$scope_file" > /dev/null
+          required=$(jq -r '.mode == "full" or (.packages | index("cc-jobs") != null)' "$scope_file")
+          if [[ "$required" == false ]]; then
+            comparison=$(jq -r '.base' "$scope_file")
+            [[ "$comparison" =~ ^[0-9a-f]{40}$ ]]
+            git diff --name-only --no-renames -z "$comparison" "$SCOPE_HEAD_SHA" -- .github/workflows/codeql.yml > "$RUNNER_TEMP/cc-jobs-linux-projection-workflow.diff"
+            if [[ -s "$RUNNER_TEMP/cc-jobs-linux-projection-workflow.diff" ]]; then required=true; fi
+          fi
+          cat "$scope_file"
+          printf 'required=%s\n' "$required" >> "$GITHUB_OUTPUT"
+      - name: Run and confirm Linux projection and cache boundary cases
+        if: matrix.language == 'rust' && steps.linux_projection_scope.outputs.required == 'true'
+        env:
+          RUSTUP_TOOLCHAIN: '1.95.0'
+          CI_RUNNER_ENVIRONMENT: ${{ runner.environment }}
+          CI_FIXED_CARGO: ${{ steps.linux_projection_rust.outputs.cargo }}
+          CI_FIXED_RUSTC: ${{ steps.linux_projection_rust.outputs.rustc }}
+          CC_LINUX_CARGO_TOOLCHAIN: '1.95.0'
+          CARGO_INCREMENTAL: '0'
+          CARGO_PROFILE_DEV_DEBUG: '0'
+          CARGO_PROFILE_TEST_DEBUG: '0'
+          CARGO_BUILD_JOBS: '2'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Hosted tests use the selected real tool; PC runners retain their Cargo gate.
+          cargo_command=(cargo)
+          if [[ "$CI_RUNNER_ENVIRONMENT" == github-hosted ]]; then
+            [[ "$CI_FIXED_CARGO" == /* && -x "$CI_FIXED_CARGO" ]]
+            export PATH="${CI_FIXED_CARGO%/*}:$PATH"
+            [[ "$CI_FIXED_RUSTC" == /* && -x "$CI_FIXED_RUSTC" ]]
+            export RUSTC="$CI_FIXED_RUSTC"
+            cargo_command=("$CI_FIXED_CARGO")
+          fi
+          cases=(
+            quota_recovery_tests::purpose_status_karaoke_identity_rejects_non_windows_before_any_record_read
+            quota_recovery_tests::purpose_status_karaoke_identity_os_boundary_preserves_linux_locators
+          )
+          index=0
+          for case in "${cases[@]}"; do
+            index=$((index + 1))
+            log="$RUNNER_TEMP/cc-jobs-linux-projection-$index.log"
+            "${cargo_command[@]}" test --locked --target x86_64-unknown-linux-gnu -p cc-jobs --test parity "$case" -- --exact --color never --test-threads=1 2>&1 | tee "$log"
+            if [[ "$CI_RUNNER_ENVIRONMENT" != github-hosted ]]; then
+              grep -Fx -- 'linux-toolchain-verified cargo=1.95.0 rustc=1.95.0' "$log"
+            fi
+            grep -Fx -- "test $case ... ok" "$log"
+            grep -Eq '^test result: ok\. 1 passed; 0 failed; 0 ignored;' "$log"
+          done
+          test "$index" -eq 2
+          # Reuse the same target/profile and owned Cargo entry for the new
+          # semantic lib controls. The fixture helper is not a passing case.
+          lib_cases=(
+            cache::tests::windows_shared_maintenance_rejects_before_any_callback
+            cache::tests::ordinary_target_environment_and_finish_remain_available
+            cache::tests::read_only_budget_rejects_linked_roots_and_entries
+            cache::tests::only_missing_cache_metadata_counts_as_empty
+            cache::tests::dangling_cache_link_is_not_an_empty_cache
+            gate::tests::non_windows_public_gate_rejects_fixed_cache_before_io_and_execution
+          )
+          lib_index=0
+          for case in "${lib_cases[@]}"; do
+            lib_index=$((lib_index + 1))
+            log="$RUNNER_TEMP/cc-jobs-linux-cache-lib-$lib_index.log"
+            "${cargo_command[@]}" test --locked --target x86_64-unknown-linux-gnu -p cc-jobs --lib "$case" -- --exact --color never --test-threads=1 2>&1 | tee "$log"
+            if [[ "$CI_RUNNER_ENVIRONMENT" != github-hosted ]]; then
+              test "$(grep -Fxc -- 'linux-toolchain-verified cargo=1.95.0 rustc=1.95.0' "$log")" -eq 1
+            fi
+            test "$(grep -Fxc -- 'running 1 test' "$log")" -eq 1
+            test "$(grep -Fxc -- "test $case ... ok" "$log")" -eq 1
+            test "$(grep -Ec '^test result: ok\. 1 passed; 0 failed; 0 ignored; 0 measured; [0-9]+ filtered out; finished in [0-9.]+s$' "$log")" -eq 1
+            test "$(grep -Ec '^test result:' "$log")" -eq 1
+            printf 'linux-lib-case-confirmed=%s\n' "$case"
+          done
+          test "$lib_index" -eq 6
+          printf 'Linux cache/gate lib cases: %s passed; 0 ignored.\n' "$lib_index"

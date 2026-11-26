@@ -275,11 +275,13 @@ fn child(t: &Test) -> Value {
         .unwrap()
 }
 
+#[cfg(windows)]
 #[test]
 fn grok_existing_research_is_admitted_through_registration_start_and_final_queue_scope() {
     research_admission(false, "normal");
 }
 
+#[cfg(windows)]
 #[test]
 fn gpt_quota_research_preserves_its_selected_route_and_budget_through_final_queue_admission() {
     for case in ["normal", "capacity_same", "capacity_switch", "capacity_anthropic", "capacity_wait", "selected_unknown", "budget_changed", "history_changed", "source_changed"] {
@@ -287,6 +289,7 @@ fn gpt_quota_research_preserves_its_selected_route_and_budget_through_final_queu
     }
 }
 
+#[cfg(windows)]
 #[test]
 fn quota_metadata_episodes_reset_after_verified_admission_without_resetting_native_budget() {
     research_admission(true,"capacity_metadata");
@@ -317,6 +320,7 @@ fn legacy_claude_reentry_checks_its_current_health_after_the_old_provider_recove
     assert_eq!(t.ctx.load("quota-reader").unwrap(),source);
 }
 
+#[cfg(windows)]
 fn research_admission(gpt: bool, case: &str) {
     use cc_job_policy::subwork;
     let (t, mut row, mut source) = setup();
@@ -623,6 +627,7 @@ fn research_admission(gpt: bool, case: &str) {
     }
 }
 
+#[cfg(windows)]
 #[test]
 fn dependency_continuation_registers_links_and_rechecks_before_real_queue_admission() {
     for case in ["continuation_normal","continuation_legacy","continuation_old_request","continuation_legacy_reset","continuation_no_retry","continuation_health","continuation_selected_unknown","continuation_source","continuation_generation","continuation_parent_generation","continuation_parent_before_registration","continuation_stop","continuation_scope"] {
@@ -630,6 +635,7 @@ fn dependency_continuation_registers_links_and_rechecks_before_real_queue_admiss
     }
 }
 
+#[cfg(windows)]
 #[test]
 fn current_finished_result_keeps_its_budget_through_registration_start_and_final_queue() {
     for case in ["continuation_result_succeeded", "continuation_result_lost", "continuation_result_cancelled", "continuation_result_reset", "continuation_result_quota_dependency", "continuation_result_quota_dependency_reset","continuation_result_quota_dependency_owner_model","continuation_result_quota_dependency_non_openai"] {
@@ -637,6 +643,7 @@ fn current_finished_result_keeps_its_budget_through_registration_start_and_final
     }
 }
 
+#[cfg(windows)]
 #[test]
 fn ordinary_current_result_ignores_stale_contract_through_registration_start_and_final_queue() {
     for case in ["ordinary_succeeded","ordinary_lost","ordinary_parent_changed"] {
@@ -679,6 +686,7 @@ fn registered_legacy_v1_capsule_keeps_its_proof_and_budget_after_capacity_retry(
     assert_eq!(t.ctx.load("quota-reader").unwrap(),source);assert_eq!(row["resume_generation"],0);
 }
 
+#[cfg(windows)]
 #[test]
 fn verified_quota_review_keeps_luna_max_fast_through_cli_and_queue_admission() {
     let (t, row, _) = setup();
@@ -723,6 +731,7 @@ fn verified_quota_review_keeps_luna_max_fast_through_cli_and_queue_admission() {
     assert_eq!(row["model_origin"], "policy");
 }
 
+#[cfg(windows)]
 #[test]
 fn quota_metadata_rechecks_are_paced_and_finite_without_rewriting_the_original_failure() {
     let (t, row, source) = setup();
@@ -839,4 +848,314 @@ fn queued_quota_recovery_rechecks_health_stop_dependencies_and_exact_generation(
         assert!(t.ctx.admit(s(&j, "id")).unwrap().is_none(), "{case}");
         assert_eq!(t.ctx.load(s(&j, "id")).unwrap()["status"], "queued");
     }
+}
+
+
+fn karaoke_identity_fixture() -> (Test, String, std::path::PathBuf) {
+    let t = Test::new();
+    let id = "20261008-100555-orch-todo-1157".to_string();
+    t.put(json!({"id":id,"todo_id":1157,"status":"succeeded","cwd":t.ctx.root,
+        "original_question_id":"1557593952604131370","last_message":"PRIVATE_REPLY","last_error":"PRIVATE_ERROR"}));
+    let result = t.ctx.job_dir(&id).join("last_message.md");
+    fs::write(&result, b"PRIVATE_REPLY_BODY").unwrap();
+    (t, id, result)
+}
+
+fn karaoke_identity_args(id: &str) -> [&str; 6] {
+    ["status", "--job-id", id, "--json", "--purpose", "karaoke-1157-result-identity"]
+}
+
+#[cfg(windows)]
+#[test]
+fn purpose_status_returns_only_karaoke_result_identity() {
+    let (t, id, result) = karaoke_identity_fixture();
+    let job = t.ctx.job_dir(&id).join("job.json");
+    let reads = Arc::new(Mutex::new(Vec::new()));
+    let seen = reads.clone();
+    *t.rt.load_hook.lock().unwrap() = Some(Box::new(move |path, _| {
+        seen.lock().unwrap().push(path.to_path_buf());
+    }));
+    let (code, output, stderr) = t.cli(&karaoke_identity_args(&id));
+    assert_eq!(code.unwrap(), 0);
+    assert!(stderr.is_empty());
+    assert!(output.is_ascii() && output.len() <= 1024);
+    assert_eq!(output.lines().count(), 1);
+    let value: Value = serde_json::from_str(&output).unwrap();
+    let keys = value.as_object().unwrap().keys().map(String::as_str).collect::<std::collections::BTreeSet<_>>();
+    assert_eq!(keys, std::collections::BTreeSet::from([
+        "metadata_only", "purpose", "id", "resultLocator", "resultBytes", "resultSha256", "bodyReturned",
+    ]));
+    assert_eq!(value, json!({
+        "metadata_only":true,"purpose":"karaoke-1157-result-identity","id":id,
+        "resultLocator":result,"resultBytes":18,
+        "resultSha256":"1555a3a033055555657ad55f95083409c5fa5f0980dce996bfc70dd76d72ed85",
+        "bodyReturned":false,
+    }));
+    assert!(!output.contains("PRIVATE"));
+    assert_eq!(*reads.lock().unwrap(), vec![job.clone(), result.clone()]);
+    let (again, repeated, stderr) = t.cli(&karaoke_identity_args(&id));
+    assert_eq!(again.unwrap(), 0);
+    assert!(stderr.is_empty());
+    assert_eq!(output, repeated);
+    assert_eq!(*reads.lock().unwrap(), vec![job.clone(), result, job.clone(), t.ctx.job_dir(&id).join("last_message.md")]);
+    assert_eq!(fs::read(t.ctx.job_dir(&id).join("last_message.md")).unwrap(), b"PRIVATE_REPLY_BODY");
+}
+
+#[cfg(windows)]
+#[test]
+fn purpose_status_karaoke_identity_rejects_selectors_before_any_record_read() {
+    let (t, id, _) = karaoke_identity_fixture();
+    let reads = Arc::new(AtomicUsize::new(0));
+    let seen = reads.clone();
+    *t.rt.load_hook.lock().unwrap() = Some(Box::new(move |_, _| { seen.fetch_add(1, Ordering::Relaxed); }));
+    for args in [
+        vec!["status", "--job-id", "other", "--json", "--purpose", "karaoke-1157-result-identity"],
+        vec!["status", "--job-id", &id, "--json", "--purpose", "KARAOKE-1157-result-identity"],
+        vec!["status", "--job-id", &id, "--json", "--purpose", " karaoke-1157-result-identity"],
+        vec!["status", "--job-id", &id, "--json", "--purpose", "karaoke-1157-result-identity "],
+        vec!["status", "--job-id", &id, "--json", "--summary", "--purpose", "karaoke-1157-result-identity"],
+        vec!["status", "--job-id", &id, "--json", "--all", "--purpose", "karaoke-1157-result-identity"],
+        vec!["status", "--job-id", &id, "--purpose", "karaoke-1157-result-identity"],
+        vec!["status", "--json", "--purpose", "karaoke-1157-result-identity"],
+    ] {
+        let (code, output, stderr) = t.cli(&args);
+        let error = code.unwrap_err();
+        assert!(output.is_empty() && stderr.is_empty());
+        assert!(!error.message.contains("PRIVATE"));
+        assert_eq!(reads.load(Ordering::Relaxed), 0);
+    }
+}
+
+#[cfg(windows)]
+#[test]
+fn purpose_status_karaoke_identity_binds_original_job_before_result_read() {
+    for case in ["wrong-id", "wrong-todo", "string-todo", "duplicate-id", "casefold-id"] {
+        let (t, id, result) = karaoke_identity_fixture();
+        let job = t.ctx.job_dir(&id).join("job.json");
+        let mut metadata = json!({"id":id,"todo_id":1157,"last_message":"PRIVATE_JOB"});
+        match case {
+            "wrong-id" => metadata["id"] = json!("other"),
+            "wrong-todo" => metadata["todo_id"] = json!(1158),
+            "string-todo" => metadata["todo_id"] = json!("1157"),
+            _ => {},
+        }
+        let bytes = if case == "duplicate-id" {
+            format!("{{\"id\":\"{id}\",\"id\":\"{id}\",\"todo_id\":1157}}").into_bytes()
+        } else if case == "casefold-id" {
+            format!("{{\"id\":\"{id}\",\"ID\":\"{id}\",\"todo_id\":1157}}").into_bytes()
+        } else { serde_json::to_vec(&metadata).unwrap() };
+        fs::write(&job, bytes).unwrap();
+        let read_result = Arc::new(AtomicBool::new(false));
+        let seen = read_result.clone();
+        *t.rt.load_hook.lock().unwrap() = Some(Box::new(move |path, _| {
+            if path == result { seen.store(true, Ordering::Relaxed); }
+        }));
+        let (code, output, stderr) = t.cli(&karaoke_identity_args(&id));
+        assert!(code.is_err(), "binding was accepted: {case}");
+        assert!(output.is_empty() && stderr.is_empty());
+        assert!(!read_result.load(Ordering::Relaxed), "result opened before binding: {case}");
+    }
+}
+
+#[cfg(windows)]
+#[test]
+fn purpose_status_karaoke_identity_uses_exact_bounded_current_bytes() {
+    for (case, bytes) in [
+        ("empty", Vec::new()),
+        ("binary", vec![0, 255, 128, 13, 10]),
+        ("at-limit", vec![b'S'; 65_536]),
+        ("changed", b"a different result".to_vec()),
+    ] {
+        let (t, id, result) = karaoke_identity_fixture();
+        fs::write(&result, &bytes).unwrap();
+        let (code, output, stderr) = t.cli(&karaoke_identity_args(&id));
+        assert_eq!(code.unwrap(), 0, "valid bound rejected: {case}");
+        assert!(stderr.is_empty());
+        let value: Value = serde_json::from_str(&output).unwrap();
+        assert_eq!(value["resultBytes"], bytes.len());
+        assert_eq!(value["resultSha256"], cc_job_policy::product_retry::digest(&bytes));
+        assert_eq!(value["bodyReturned"], false);
+        assert!(!output.contains("PRIVATE"));
+        assert_eq!(fs::read(result).unwrap(), bytes);
+    }
+    for case in ["missing", "directory", "over-limit", "read-denied"] {
+        let (t, id, result) = karaoke_identity_fixture();
+        match case {
+            "missing" => fs::remove_file(&result).unwrap(),
+            "directory" => { fs::remove_file(&result).unwrap(); fs::create_dir(&result).unwrap(); },
+            "over-limit" => fs::write(&result, vec![b'S'; 65_537]).unwrap(),
+            "read-denied" => *t.rt.load_error_path.lock().unwrap() = Some(result),
+            _ => unreachable!(),
+        }
+        let (code, output, stderr) = t.cli(&karaoke_identity_args(&id));
+        let error = code.unwrap_err();
+        assert!(output.is_empty() && stderr.is_empty());
+        assert!(!error.message.contains("PRIVATE"));
+        assert_eq!(error.message, if case == "over-limit" { "job projection source too large" } else { "job projection source unavailable" });
+    }
+}
+
+#[cfg(windows)]
+#[test]
+fn purpose_status_karaoke_identity_rejects_hardlinked_result() {
+    let (t, id, result) = karaoke_identity_fixture();
+    let other = t.ctx.root.join("same-content-other-result");
+    fs::hard_link(&result, &other).unwrap();
+    let (code, output, stderr) = t.cli(&karaoke_identity_args(&id));
+    assert!(code.is_err());
+    assert!(output.is_empty() && stderr.is_empty());
+    assert_eq!(fs::read(other).unwrap(), b"PRIVATE_REPLY_BODY");
+}
+
+#[cfg(windows)]
+#[test]
+fn purpose_status_karaoke_identity_rejects_symbolic_result_and_job_parent() {
+    for parent in [false, true] {
+        let (t, id, result) = karaoke_identity_fixture();
+        let dir = t.ctx.job_dir(&id);
+        if parent {
+            let other = t.ctx.root.join("owned-other-job");
+            fs::rename(&dir, &other).unwrap();
+            std::os::windows::fs::symlink_dir(&other, &dir).unwrap();
+        } else {
+            let other = t.ctx.root.join("owned-other-result");
+            fs::rename(&result, &other).unwrap();
+            std::os::windows::fs::symlink_file(&other, &result).unwrap();
+        }
+        let (code, output, stderr) = t.cli(&karaoke_identity_args(&id));
+        // Remove only the fixture's link name; retain its owned target until Test drops.
+        if parent { fs::remove_dir(&dir).unwrap(); } else { fs::remove_file(&result).unwrap(); }
+        assert!(code.is_err(), "redirected result/parent was accepted");
+        assert!(output.is_empty() && stderr.is_empty());
+    }
+}
+
+#[cfg(windows)]
+#[test]
+fn purpose_status_karaoke_identity_pins_parent_and_reads_current_namespace_each_call() {
+    let (t, id, result) = karaoke_identity_fixture();
+    let dir = t.ctx.job_dir(&id);
+    let pinned_dir = dir.clone();
+    let body = result.clone();
+    let observed = Arc::new(AtomicBool::new(false));
+    let seen = observed.clone();
+    *t.rt.load_hook.lock().unwrap() = Some(Box::new(move |path, _| {
+        if path == body {
+            assert!(
+                fs::rename(&pinned_dir, pinned_dir.with_extension("moved")).is_err(),
+                "held parent moved"
+            );
+            seen.store(true, Ordering::Relaxed);
+        }
+    }));
+    let (code, output, stderr) = t.cli(&karaoke_identity_args(&id));
+    assert_eq!(code.unwrap(), 0);
+    assert!(stderr.is_empty());
+    assert!(observed.load(Ordering::Relaxed));
+    assert!(!output.contains("PRIVATE"));
+
+    // After the projection releases its pins, a new call must observe the
+    // current owned namespace, never the prior generation's cached bytes.
+    *t.rt.load_hook.lock().unwrap() = None;
+    let prior = t.ctx.root.join("owned-prior-job-generation");
+    fs::rename(&dir, &prior).unwrap();
+    t.put(json!({"id":id,"todo_id":1157,"status":"succeeded"}));
+    let current = dir.join("last_message.md");
+    let current_bytes = b"CURRENT_NAMESPACE_RESULT";
+    fs::write(&current, current_bytes).unwrap();
+    let (code, output, stderr) = t.cli(&karaoke_identity_args(&id));
+    assert_eq!(code.unwrap(), 0);
+    assert!(stderr.is_empty());
+    let value: Value = serde_json::from_str(&output).unwrap();
+    assert_eq!(value["resultBytes"], current_bytes.len());
+    assert_eq!(value["resultSha256"], cc_job_policy::product_retry::digest(current_bytes));
+    assert_eq!(value["resultLocator"], json!(current));
+    assert_eq!(fs::read(prior.join("last_message.md")).unwrap(), b"PRIVATE_REPLY_BODY");
+}
+
+
+#[cfg(windows)]
+#[test]
+fn purpose_status_karaoke_identity_rejects_junction_job_parent() {
+    use std::os::windows::fs::OpenOptionsExt;
+    use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::System::IO::DeviceIoControl;
+    let (t, id, _) = karaoke_identity_fixture();
+    let dir = t.ctx.job_dir(&id);
+    let target = t.ctx.root.join("owned-junction-target");
+    fs::rename(&dir, &target).unwrap();
+    fs::create_dir(&dir).unwrap();
+    let canonical = fs::canonicalize(&target).unwrap();
+    let print = canonical.to_string_lossy();
+    let print = print.strip_prefix(r"\\?\").unwrap_or(&print);
+    let substitute = format!(r"\??\{print}").encode_utf16().collect::<Vec<_>>();
+    let display = print.encode_utf16().collect::<Vec<_>>();
+    let data_size = 8 + 2 * (substitute.len() + 1 + display.len() + 1);
+    let mut reparse = Vec::with_capacity(8 + data_size);
+    reparse.extend_from_slice(&0xa0000003u32.to_le_bytes());
+    reparse.extend_from_slice(&u16::try_from(data_size).unwrap().to_le_bytes());
+    reparse.extend_from_slice(&0u16.to_le_bytes());
+    reparse.extend_from_slice(&0u16.to_le_bytes());
+    reparse.extend_from_slice(&u16::try_from(substitute.len() * 2).unwrap().to_le_bytes());
+    reparse.extend_from_slice(&u16::try_from((substitute.len() + 1) * 2).unwrap().to_le_bytes());
+    reparse.extend_from_slice(&u16::try_from(display.len() * 2).unwrap().to_le_bytes());
+    for ch in substitute.iter().copied().chain([0]).chain(display.iter().copied()).chain([0]) {
+        reparse.extend_from_slice(&ch.to_le_bytes());
+    }
+    let link = fs::OpenOptions::new().write(true).share_mode(7)
+        .custom_flags(0x02000000 | 0x00200000).open(&dir).unwrap();
+    let mut returned = 0;
+    let applied = unsafe {
+        DeviceIoControl(link.as_raw_handle() as _, 0x000900a4,
+            reparse.as_ptr() as _, u32::try_from(reparse.len()).unwrap(),
+            std::ptr::null_mut(), 0, &mut returned, std::ptr::null_mut())
+    };
+    let setup_error = std::io::Error::last_os_error();
+    drop(link);
+    assert_ne!(applied, 0, "owned junction fixture setup failed: {setup_error}");
+    let (code, output, stderr) = t.cli(&karaoke_identity_args(&id));
+    fs::remove_dir(&dir).unwrap();
+    assert!(code.is_err(), "junction parent was accepted");
+    assert!(output.is_empty() && stderr.is_empty());
+    assert_eq!(fs::read(target.join("last_message.md")).unwrap(), b"PRIVATE_REPLY_BODY");
+}
+
+
+#[cfg(not(windows))]
+#[test]
+fn purpose_status_karaoke_identity_rejects_non_windows_before_any_record_read() {
+    let t = Test::new();
+    let reads = Arc::new(AtomicUsize::new(0));
+    let seen = reads.clone();
+    *t.rt.load_hook.lock().unwrap() = Some(Box::new(move |_, _| {
+        seen.fetch_add(1, Ordering::Relaxed);
+    }));
+    let (code, output, stderr) =
+        t.cli(&karaoke_identity_args("20261008-100555-orch-todo-1157"));
+    assert_eq!(code.unwrap_err().message, "job projection purpose unavailable");
+    assert!(output.is_empty() && stderr.is_empty());
+    assert_eq!(reads.load(Ordering::Relaxed), 0);
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn purpose_status_karaoke_identity_os_boundary_preserves_linux_locators() {
+    let (t, id, result) = karaoke_identity_fixture();
+    let (code, output, stderr) = t.cli(&[
+        "status",
+        "--job-id",
+        &id,
+        "--json",
+        "--purpose",
+        "karaoke-1157-locators",
+    ]);
+    assert_eq!(code.unwrap(), 0);
+    assert!(stderr.is_empty());
+    let value: Value = serde_json::from_str(&output).unwrap();
+    assert_eq!(value["purpose"], "karaoke-1157-locators");
+    assert_eq!(value["resultLocator"], json!(result));
+    assert_eq!(value["cwd"], json!(t.ctx.root));
+    assert_eq!(value["originalQuestionId"], "1557593952604131370");
+    assert!(value.get("resultSha256").is_none());
+    assert_eq!(fs::read(result).unwrap(), b"PRIVATE_REPLY_BODY");
 }

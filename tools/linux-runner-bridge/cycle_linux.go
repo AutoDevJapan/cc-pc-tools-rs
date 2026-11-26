@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -399,9 +400,9 @@ func runNormalCycle(root, tmpRoot, runnerRoot string, quiescent func() error) (i
 	if err := c.Start(); err != nil {
 		return 1, err
 	}
-	result := c.Wait()
-	if err := terminateAndDrainGroup(c, 3*time.Second, 15*time.Second); err != nil {
-		return 1, err
+	result, drainErr := superviseGroup(context.Background(), c, 3*time.Second, 15*time.Second)
+	if drainErr != nil {
+		return 1, drainErr
 	}
 	if err := quiescent(); err != nil {
 		return 1, err

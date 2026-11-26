@@ -1,66 +1,11 @@
 # PCのRust補助ツール
 
-このPCで使っているDiscordの質問・作業一覧ツールと、そのビルドに必要なRustモジュールのソースを保存する非公開リポジトリです。実行記録・認証情報・実行ファイルは保存しません。
+Windows で共有ToDo、Discord の質問・通知、ジョブの管理を扱うツール集です。
 
-- `cc-todo`: 共有ToDoと担当が記録する進み具合。
-- `cc-scheduler`: ToDoから作業を起動する既存の共通処理。
-- `cc-ask`: `discord_ask.exe`。質問の受付・返信の反映・定期処理・作業状況の一覧。
-- `cc-chrome`: オーナーのChromeで、担当が開いたタブを記録する補助。
-- `cc-job-policy`: ジョブの実行範囲と権限の共通設定。
-- `cc-task-title`: オーナー向けの表示名と案件名の除去。
-- `cc-redact`: 保存・公開する文章とJSONから、APIキー・トークン・Authorizationヘッダー・URLのパスワードなどの秘密を除く共通処理。ジョブの記録（events.jsonl・job.json・stderr.log・last_message.md・context-summary-output.md）は、ディスクに書く前にこれを通します。最後のメッセージのファイルは codex に直接書かせず（`-o` を使わない）、監視側が置き換え済みのイベントから書くので、実行中や異常終了の後にも生の値は残りません。複数行にまたがる秘密鍵や引用符付きの値は、閉じるまで（最大64KiB）ためてからまとめて置き換えます。codex に渡す入力（prompt.md・context-continue.md・yield-resume.md・context-summary-prompt.md と標準入力）は、依頼の意味を変えないよう置き換えません。これらには依頼者が書いた文がそのまま残ります。
-- `cc-gh-gate`: `gh` の前に置き、PR・Issue・リリース・`gh api` で公開する本文から秘密を除いてから本物の gh を実行するゲート。範囲と配置は [cc-gh-gate/README.md](cc-gh-gate/README.md)。
-- `cc-live`: 実機検査とプロセス管理の共通処理。
-- `cc-local-llm`: このPCのOllama（llm-jp、足りないときだけgemma3:4b）へ時間の上限付きで軽い文章作業を頼む共通処理。
-- `cc-ocx-watchdog`: opencodexの応答停止を検出し、対象プロセスを終了してサービスの復旧を確認するRust監視。
-- `chatgpt-web`: ChatGPTのブラウザ版（専用プロフィールのChrome）へ質問を送り、回答の本文を返すCLIと毎日のログイン確認。
+**[公式 Wiki](https://github.com/AutoDevJapan/cc-pc-tools-rs/wiki)** — 初めて使う方は [Windows で試す](https://github.com/AutoDevJapan/cc-pc-tools-rs/wiki/Windows%E3%81%A7%E8%A9%A6%E3%81%99) へ。主な実行ファイルと開発資料は [ツールと技術資料](https://github.com/AutoDevJapan/cc-pc-tools-rs/wiki/%E3%83%84%E3%83%BC%E3%83%AB%E3%81%A8%E6%8A%80%E8%A1%93%E8%B3%87%E6%96%99) にまとめています。
 
-既存iOS compiler diagnosticの用途限定読取は
-[元artifactの確認と読取](docs/ios-compiler-artifact-read.md)を参照してください。
+<a name="このpcのモデルに任せる軽い作業2026-10-07"></a>
+<a name="メインのセッションが送った質問への返信"></a>
+<a name="回答を担当へ届けられなかったとき"></a>
 
-稼働中のソースは `D:/CC/Tools/rs/` にあります。Windows上で `cargo test --manifest-path cc-ask/Cargo.toml`、`cargo build --release --manifest-path cc-ask/Cargo.toml` を実行します。ビルドと配置の前に別モデルでレビューし、Mustを解消します。
-
-作業一覧の仕様と状態ファイルは [BOARD.md](cc-ask/BOARD.md) を参照してください。初回の検証は2026-10-06にWindowsで全430件成功、配布物を指定する必要がある既存の1件は対象の配布物がないため未実行です。一覧の11件はすべて成功しました。別モデルgpt-6-lunaの再レビューでMustは0件でした。
-
-新しい有料の検証環境は設けず、このPCと既存のGitHub Actionsで検査します。Cargoのゲートとジョブ管理はWindowsのCIで確認します。[ビルドとテストの規則](docs/build-speed.md)に従い、作業途中もマージ前も変更クレートと利用側をnextestで確認し、全件は共有設定の変更など必要な理由がある場合だけ実行します。プロセスの起動・停止を扱う検査は専用のグループで一つずつ実行し、他の検査は並列に回します。
-
-## このPCのモデルに任せる軽い作業（2026-10-07）
-
-次の2つは Codex を使わず、`http://127.0.0.1:11434` の llm-jp（`llm-jp-4-8b-thinking`）に頼みます。llm-jp の答えが使えないときだけ gemma3:4b に頼みます。どちらも時間の上限があり、失敗したら今までのやり方で続けます。
-
-1. 作業状況の一覧の作業名の言い換え（`cc-ask/src/board.rs`）。1件20秒・全体40秒まで。答えは40字以内で括弧が閉じた日本語1行だけを使います。失敗したら記号を除いて短く切った題名のままにし、同じ題名は再試行しません。
-2. オーナー向けの投稿の日本語の点検（`cc-ask/src/ja_check.rs`）。語・文の長さ・英語の識別子・丸数字・謝罪の書き出しは決まった規則で、名詞の連なりは llm-jp で調べます。`discord_ask.exe lint --body-file <file>` で投稿前に確認できます。`ask`・`log`・`post` でも送る前に点検し、指摘を標準エラーへ出します。投稿は止めません。
-
-ジョブの完了通知の要約は、以前から GoDD-AO が同じ llm-jp で行っているので変更していません。ジョブのモデルの振り分けと、最初の1文に結論があるかの点検も llm-jp で試しましたが、実際の入力20件で誤りが多かったため任せていません（実装の作業を軽いモデルへ回す誤りが3件、結論の誤検出が11件）。Codex の結果との比較は `D:/CC/Reports/local-llm-light-tasks-2026-10-07.md` にあります。
-
-## メインのセッションが送った質問への返信
-
-`discord_ask ask --agent claude-main` で送った質問への返信は、質問を閉じた後も
-`inbox --state-file <既読位置のファイル>` から受け取ります。
-定期受付や回答からの再開は、そのスレッドからジョブを起動せず、返信の既読位置も進めません。
-以前の起動待ち記録が残っていても同じです。通常の担当の質問は従来どおり処理します。
-
-ほかのメインの名前は、Discord 通知の設定ファイル（通常は
-`%USERPROFILE%/.godd/discord-notify.json`、`CC_ASK_CONFIG` で変更可）に追加できます。
-既存の設定項目を保ったまま、次の項目を追加してください。
-
-```json
-{ "inbox_only_agents": ["codex-main", "other-main"] }
-```
-
-名前は完全一致で判定し、`claude-main` は設定の有無にかかわらず対象です。
-名前の一部・タイトル・作業フォルダーでは判定しません。
-
-## 回答を担当へ届けられなかったとき
-
-通信が一時的に失敗した場合は、最初の失敗から15分以内、毎分の巡回で再試行します。
-起動の記録を使って、応答を受け取れなかったジョブも確認し、二重に起動しません。
-期限を過ぎても質問を閉じず、回答と再開の記録を残します。
-`inbox` は既読位置より古い回答でも「再開失敗」を繰り返し表示し、担当への送達が確認されたら表示を消します。
-
-`post` で選択肢を尋ねた投稿も質問として登録し、投稿したセッションを記録します。
-セッションの記録がない質問は、スレッドに記録されたジョブや、質問を投稿した担当の記録を探して再開します。
-見つからなければ、新しい担当を無関係に起動せず、`inbox` に「再開先なし」として残します。
-メインの `claude-main` への返信は、引き続き inbox だけで受け取ります。
-通信が復旧した後は `retry-reply --thread <スレッドID>` で、その質問だけを次の巡回で再試行できます。
-過去に閉じた質問は自動では開き直しません。完了した質問とオーナーが停止した質問は再試行の対象から外します。
+以前の README の説明は [文章の点検](https://github.com/AutoDevJapan/cc-pc-tools-rs/wiki/%E6%96%87%E7%AB%A0%E3%81%A8%E5%85%AC%E9%96%8B%E5%86%85%E5%AE%B9%E3%82%92%E7%82%B9%E6%A4%9C%E3%81%99%E3%82%8B) と [Discord の質問・回答](https://github.com/AutoDevJapan/cc-pc-tools-rs/wiki/Discord%E3%81%A7%E8%B3%AA%E5%95%8F%E3%81%A8%E9%80%B2%E6%8D%97%E3%82%92%E6%89%B1%E3%81%86) から読めます。
